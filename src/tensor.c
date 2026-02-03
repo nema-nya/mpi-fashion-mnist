@@ -10,6 +10,14 @@ static size_t numel(const Shape shape) {
     return p;
 }
 
+static int assert_tensor(const Tensor* a, const Tensor* b) {
+    if (!a || !b) return 0;
+    if (!a->data || !b->data) return 0;
+    if (!tensor_same_shape(a, b)) return 0;
+    if (a->size != b->size) return 0;
+    return 1;
+}
+
 int tensor_alloc(Tensor* t, const Shape shape) {
     if (!t) return 0;
     if (shape.ndims == 0 || shape.ndims > MAX_DIMS) return 0;
@@ -56,11 +64,27 @@ int tensor_same_shape(const Tensor* a, const Tensor* b) {
 }
 
 int tensor_mul(Tensor* a, const Tensor* b) {
-    if (!a || !b) return 0;
-    if (!a->data || !b->data) return 0;
-    if (!tensor_same_shape(a, b)) return 0;
-    if (a->size != b->size) return 0;
-
+    if (!assert_tensor(a, b)) return 0;
     for (size_t i = 0; i < a->size; ++i) a->data[i] *= b->data[i];
+    return 1;
+}
+
+int tensor_add(Tensor* a, const Tensor* b) {
+    if (!assert_tensor(a, b)) return 0;
+    for (size_t i = 0; i < a->size; ++i) a->data[i] += b->data[i];
+    return 1;
+}
+
+int tensor_fill(Tensor* t, float value) {
+    if (!t || !t->data) return 0;
+    for (size_t i = 0; i < t->size; ++i) t->data[i] = value;
+    return 1;
+}
+
+int tensor_zero(Tensor* t) { return tensor_fill(t, 0.0f); }
+
+int tensor_scale(Tensor* t, float a) {
+    if (!t || !t->data) return 0;
+    for (size_t i = 0; i < t->size; ++i) t->data[i] *= a;
     return 1;
 }
