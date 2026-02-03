@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+#include "rng.h"
+
 #define MAX_DIMS 8
 
 typedef struct {
@@ -34,5 +36,23 @@ int tensor_fill(Tensor* t, float value);
 int tensor_zero(Tensor* t);
 
 int tensor_scale(Tensor* t, float a);
+
+int tensor_fill_rand_uniform(Tensor* t, RNG* r);
+
+int tensor_fill_rand_normal(Tensor* t, RNG* r);
+
+int tensor_copy(Tensor* dst, const Tensor* src);
+
+int tensor_clone(Tensor* dst, const Tensor* src);
+
+int tensor_axpy(Tensor* y, float a, const Tensor* x);
+
+float tensor_get(const Tensor* t, size_t index);
+
+Shape shape1(size_t d0);
+
+Shape shape2(size_t d0, size_t d1);
+
+Shape shape3(size_t d0, size_t d1, size_t d2);
 
 #endif

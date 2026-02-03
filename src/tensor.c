@@ -1,8 +1,6 @@
 #include "tensor.h"
 
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 static size_t numel(const Shape shape) {
     size_t p = 1;
@@ -23,6 +21,8 @@ int tensor_alloc(Tensor* t, const Shape shape) {
     if (shape.ndims == 0 || shape.ndims > MAX_DIMS) return 0;
     for (size_t i = 0; i < shape.ndims; ++i)
         if (shape.dims[i] == 0) return 0;
+
+    free(t->data);
 
     t->data = NULL;
     t->shape = shape;
@@ -87,4 +87,51 @@ int tensor_scale(Tensor* t, float a) {
     if (!t || !t->data) return 0;
     for (size_t i = 0; i < t->size; ++i) t->data[i] *= a;
     return 1;
+}
+
+int tensor_copy(Tensor* dst, const Tensor* src) {
+    if (!assert_tensor(dst, src)) return 0;
+    for (size_t i = 0; i < src->size; ++i) dst->data[i] = src->data[i];
+    return 1;
+}
+
+int tensor_clone(Tensor* dst, const Tensor* src) {
+    if (!dst || !src) return 0;
+    if (!src->data) return 0;
+    if (!tensor_alloc(dst, src->shape)) return 0;
+
+    for (size_t i = 0; i < src->size; ++i) dst->data[i] = src->data[i];
+    return 1;
+}
+
+int tensor_axpy(Tensor* y, float a, const Tensor* x) {
+    if (!assert_tensor(y, x)) return 0;
+
+    for (size_t i = 0; i < y->size; ++i) y->data[i] += a * x->data[i];
+    return 1;
+}
+
+float tensor_get(const Tensor* t, size_t index) {
+    if (!t || !t->data || index >= t->size) return 0.0f;
+    return t->data[index];
+}
+int tensor_fill_rand_uniform(Tensor* t, RNG* r) {
+    if (!t || !t->data || !r) return 0;
+    for (size_t i = 0; i < t->size; ++i) t->data[i] = rng_uniform(r);
+    return 1;
+}
+int tensor_fill_rand_normal(Tensor* t, RNG* r) {
+    if (!t || !t->data || !r) return 0;
+    for (size_t i = 0; i < t->size; ++i) t->data[i] = rng_normal(r);
+    return 1;
+}
+
+Shape shape1(size_t d0) { return (Shape){.dims = {d0}, .ndims = 1}; }
+
+Shape shape2(size_t d0, size_t d1) {
+    return (Shape){.dims = {d0, d1}, .ndims = 2};
+}
+
+Shape shape3(size_t d0, size_t d1, size_t d2) {
+    return (Shape){.dims = {d0, d1, d2}, .ndims = 3};
 }
