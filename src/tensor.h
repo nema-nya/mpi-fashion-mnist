@@ -53,6 +53,8 @@ int tensor_index(const Tensor* t, ...);
 
 int reshape(Tensor* t, const Shape shape);
 
+int permute(Tensor* t, ...);
+
 Shape shape1(size_t d0);
 
 Shape shape2(size_t d0, size_t d1);

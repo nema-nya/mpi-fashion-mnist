@@ -148,6 +148,28 @@ int reshape(Tensor* t, const Shape shape) {
     return 1;
 }
 
+int tensor_unindex(const Tensor* t, int ix, int* ixs) {
+    for (int i = 0; i < t->shape.rank; ++i) {
+        ixs[i] = ix % t->shape.dims[i];
+        ix /= t->shape.dims[i];
+    }
+    return 0;
+}
+
+int permute(Tensor* t, ...) {
+    if (!t) return 0;
+    va_list args;
+    va_start(args);
+    int new_shape_indices[t->shape.rank];
+    Shape s;
+    s.rank = t->shape.rank;
+    for (size_t i = 0; i < t->shape.rank; ++i) {
+        int ix = va_arg(args, int);
+        new_shape_indices[i] = ix;
+        s.dims[i] = t->shape.dims[ix];
+    }
+}
+
 Shape shape1(size_t d0) { return (Shape){.dims = {d0}, .rank = 1}; }
 
 Shape shape2(size_t d0, size_t d1) {
