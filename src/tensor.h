@@ -5,11 +5,11 @@
 
 #include "rng.h"
 
-#define MAX_DIMS 8
+#define MAX_RANK 8
 
 typedef struct {
-    size_t dims[MAX_DIMS];
-    size_t ndims;
+    size_t dims[MAX_RANK];
+    size_t rank;
 } Shape;
 
 typedef struct {
@@ -48,6 +48,8 @@ int tensor_clone(Tensor* dst, const Tensor* src);
 int tensor_axpy(Tensor* y, float a, const Tensor* x);
 
 float tensor_get(const Tensor* t, size_t index);
+
+int tensor_index(const Tensor* t, ...);
 
 Shape shape1(size_t d0);
 

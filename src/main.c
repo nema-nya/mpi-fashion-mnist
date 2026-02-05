@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "dataset.h"
+#include "linalg.h"
 #include "tensor.h"
 
 int main(void) {
@@ -15,8 +16,12 @@ int main(void) {
 
     Tensor t1 = {0};
     Tensor t2 = {0};
-    Shape s = shape2(3, 5);
-    if (!tensor_alloc(&t1, s) || !tensor_alloc(&t2, s)) {
+    Tensor t3 = {0};
+    Shape s = shape3(3, 3, 3);
+    // Shape s_t2 = shape3()
+    // Shape
+    if (!tensor_alloc(&t1, s) || !tensor_alloc(&t2, s) ||
+        !tensor_alloc(&t3, s)) {
         printf("failed to allocate tensors\n");
         tensor_free(&t1);
         tensor_free(&t2);
@@ -24,20 +29,23 @@ int main(void) {
         return 1;
     }
 
-    if (!tensor_zero(&t1) || !tensor_fill(&t2, 1.123f) ||
-        !tensor_add(&t1, &t2) || !tensor_mul(&t1, &t2)) {
+    if (!tensor_fill(&t1, 1.5f) || !tensor_fill(&t2, 1.5f) ||
+        !tensor_zero(&t3)) {
         printf("tensor operation failed\n");
         tensor_free(&t1);
         tensor_free(&t2);
         dataset_free(&d);
         return 1;
     }
-    RNG rng = {0};
-    rng.state = 67;
-    tensor_fill_rand_normal(&t1, &rng);
+    if (!bmm(&t3, &t1, &t2)) {
+        printf("failed\n");
+    }
+    // RNG rng = {0};
+    // rng.state = 67;
+    // tensor_fill_rand_normal(&t1, &rng);
 
-    for (size_t i = 0; i < t1.size; ++i) {
-        printf("%f\n", t1.data[i]);
+    for (size_t i = 0; i < t3.size; ++i) {
+        printf("%f\n", t3.data[i]);
     }
 
     tensor_free(&t1);

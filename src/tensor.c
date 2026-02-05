@@ -1,14 +1,15 @@
 #include "tensor.h"
 
+#include <stdarg.h>
 #include <stdlib.h>
 
 static size_t numel(const Shape shape) {
     size_t p = 1;
-    for (size_t i = 0; i < shape.ndims; ++i) p *= shape.dims[i];
+    for (size_t i = 0; i < shape.rank; ++i) p *= shape.dims[i];
     return p;
 }
 
-static int assert_tensor(const Tensor* a, const Tensor* b) {
+static int assert_tensors(const Tensor* a, const Tensor* b) {
     if (!a || !b) return 0;
     if (!a->data || !b->data) return 0;
     if (!tensor_same_shape(a, b)) return 0;
@@ -18,8 +19,8 @@ static int assert_tensor(const Tensor* a, const Tensor* b) {
 
 int tensor_alloc(Tensor* t, const Shape shape) {
     if (!t) return 0;
-    if (shape.ndims == 0 || shape.ndims > MAX_DIMS) return 0;
-    for (size_t i = 0; i < shape.ndims; ++i)
+    if (shape.rank == 0 || shape.rank > MAX_RANK) return 0;
+    for (size_t i = 0; i < shape.rank; ++i)
         if (shape.dims[i] == 0) return 0;
 
     free(t->data);
@@ -31,7 +32,7 @@ int tensor_alloc(Tensor* t, const Shape shape) {
 
     if (!t->data) {
         t->size = 0;
-        t->shape.ndims = 0;
+        t->shape.rank = 0;
         return 0;
     }
 
@@ -42,7 +43,7 @@ void tensor_free(Tensor* t) {
     if (!t) return;
     free(t->data);
     t->data = NULL;
-    t->shape.ndims = 0;
+    t->shape.rank = 0;
     t->size = 0;
 }
 
@@ -50,27 +51,27 @@ size_t tensor_size(const Tensor* t) { return t ? t->size : 0; }
 
 size_t tensor_dim(const Tensor* t, size_t i) {
     if (!t) return 0;
-    if (i >= t->shape.ndims) return 0;
+    if (i >= t->shape.rank) return 0;
     return t->shape.dims[i];
 }
 
 int tensor_same_shape(const Tensor* a, const Tensor* b) {
     if (!a || !b) return 0;
-    if (a->shape.ndims != b->shape.ndims) return 0;
-    for (size_t i = 0; i < a->shape.ndims; ++i) {
+    if (a->shape.rank != b->shape.rank) return 0;
+    for (size_t i = 0; i < a->shape.rank; ++i) {
         if (a->shape.dims[i] != b->shape.dims[i]) return 0;
     }
     return 1;
 }
 
 int tensor_mul(Tensor* a, const Tensor* b) {
-    if (!assert_tensor(a, b)) return 0;
+    if (!assert_tensors(a, b)) return 0;
     for (size_t i = 0; i < a->size; ++i) a->data[i] *= b->data[i];
     return 1;
 }
 
 int tensor_add(Tensor* a, const Tensor* b) {
-    if (!assert_tensor(a, b)) return 0;
+    if (!assert_tensors(a, b)) return 0;
     for (size_t i = 0; i < a->size; ++i) a->data[i] += b->data[i];
     return 1;
 }
@@ -90,7 +91,7 @@ int tensor_scale(Tensor* t, float a) {
 }
 
 int tensor_copy(Tensor* dst, const Tensor* src) {
-    if (!assert_tensor(dst, src)) return 0;
+    if (!assert_tensors(dst, src)) return 0;
     for (size_t i = 0; i < src->size; ++i) dst->data[i] = src->data[i];
     return 1;
 }
@@ -105,7 +106,7 @@ int tensor_clone(Tensor* dst, const Tensor* src) {
 }
 
 int tensor_axpy(Tensor* y, float a, const Tensor* x) {
-    if (!assert_tensor(y, x)) return 0;
+    if (!assert_tensors(y, x)) return 0;
 
     for (size_t i = 0; i < y->size; ++i) y->data[i] += a * x->data[i];
     return 1;
@@ -126,12 +127,24 @@ int tensor_fill_rand_normal(Tensor* t, RNG* r) {
     return 1;
 }
 
-Shape shape1(size_t d0) { return (Shape){.dims = {d0}, .ndims = 1}; }
+int tensor_index(const Tensor* t, ...) {
+    va_list args;
+    va_start(args);
+    int out = 0;
+    for (size_t i = 0; i < t->shape.rank; ++i) {
+        size_t ix = va_arg(args, int);
+        out *= t->shape.dims[i];
+        out += ix;
+    }
+    return out;
+}
+
+Shape shape1(size_t d0) { return (Shape){.dims = {d0}, .rank = 1}; }
 
 Shape shape2(size_t d0, size_t d1) {
-    return (Shape){.dims = {d0, d1}, .ndims = 2};
+    return (Shape){.dims = {d0, d1}, .rank = 2};
 }
 
 Shape shape3(size_t d0, size_t d1, size_t d2) {
-    return (Shape){.dims = {d0, d1, d2}, .ndims = 3};
+    return (Shape){.dims = {d0, d1, d2}, .rank = 3};
 }

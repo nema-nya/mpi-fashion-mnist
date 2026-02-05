@@ -13,7 +13,7 @@ DEPS := $(OBJS:.o=.d)
 CPPFLAGS ?=
 CPPFLAGS += -I$(SRC_DIR)
 
-CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic
+CFLAGS ?= -std=c23 -Wall -Wextra -Wpedantic
 LDFLAGS ?=
 LDLIBS ?=
 LDLIBS += -lm
