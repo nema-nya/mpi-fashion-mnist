@@ -139,6 +139,15 @@ int tensor_index(const Tensor* t, ...) {
     return out;
 }
 
+int reshape(Tensor* t, const Shape shape) {
+    if (!t) return 0;
+    int t_shape_size = numel(t->shape);
+    int s_shape_size = numel(shape);
+    if (t_shape_size != s_shape_size) return 0;
+    t->shape = shape;
+    return 1;
+}
+
 Shape shape1(size_t d0) { return (Shape){.dims = {d0}, .rank = 1}; }
 
 Shape shape2(size_t d0, size_t d1) {
