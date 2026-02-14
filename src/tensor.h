@@ -61,6 +61,8 @@ int permute(Tensor *t, ...);
 
 int tensor_arange(Tensor *t);
 
+int shape_expand(const Shape l, const Shape r, Shape* out);
+
 Shape shape1(size_t d0);
 
 Shape shape2(size_t d0, size_t d1);

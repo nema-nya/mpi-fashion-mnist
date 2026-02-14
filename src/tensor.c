@@ -246,6 +246,63 @@ int tensor_arange(Tensor *t) {
   return 0;
 }
 
+int tensor_expand(const Tensor *src, Tensor *dest) {
+  if (!src || !dest) {
+    return 1;
+  }
+
+  Shape shape_dest;
+  if (shape_expand(src->shape, dest->shape, &shape_dest)) {
+    return 2;
+  }
+
+  return 0;
+}
+
+bool shape_is_equal(const Shape a, const Shape b) {
+  if (a.rank != b.rank) {
+    return false;
+  }
+  for (size_t i = 0; i < a.rank; ++i) {
+    if (a.dims[i] != b.dims[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+int shape_expand(const Shape l, const Shape r, Shape *out) {
+  size_t max_rank = max(l.rank, r.rank);
+  Shape l_ex;
+  Shape r_ex;
+  l_ex.rank = max_rank;
+  r_ex.rank = max_rank;
+  size_t l_pad = max_rank - l.rank;
+  size_t r_pad = max_rank - r.rank;
+  out->rank = max_rank;
+  for (size_t i = 0; i < max_rank; ++i) {
+    if (i < l_pad) {
+      l_ex.dims[i] = 1;
+    } else {
+      l_ex.dims[i] = l.dims[i - l_pad];
+    }
+    if (i < r_pad) {
+      r_ex.dims[i] = 1;
+    } else {
+      r_ex.dims[i] = r.dims[i - r_pad];
+    }
+  }
+
+  for (size_t i = 0; i < max_rank; ++i) {
+    if ((l_ex.dims[i] != r_ex.dims[i]) &&
+        (l_ex.dims[i] != 1 && r_ex.dims[i] != 1)) {
+      return 1;
+    }
+    out->dims[i] = max(l_ex.dims[i], r_ex.dims[i]);
+  }
+  return 0;
+}
+
 Shape shape1(size_t d0) { return (Shape){.dims = {d0}, .rank = 1}; }
 
 Shape shape2(size_t d0, size_t d1) {

@@ -29,6 +29,7 @@ int main(void) {
   Tensor t2 = {0};
   Tensor t3 = {0};
   Shape s = shape3(5, 3, 2);
+  Shape s2 = shape3(2, 2, 3);
   if (!tensor_alloc(&t1, s) || !tensor_alloc(&t2, s) || !tensor_alloc(&t3, s)) {
     printf("failed to allocate tensors\n");
     tensor_free(&t1);
@@ -36,6 +37,12 @@ int main(void) {
     dataset_free(&d);
     return 1;
   }
+
+  Shape s_1 = shape2(2, 3);
+  Shape s_2 = shape1(3);
+  Shape out;
+  shape_expand(s_1, s_2, &out);
+  printf("rank - %zu dim0 - %zu  dim1 - %zu", out.rank, out.dims[0], out.dims[1]);
 
   float *layer1_weight = (float *)read_all("data/layer1-weight.bin", NULL);
   float *layer1_bias = (float *)read_all("data/layer1-bias.bin", NULL);
