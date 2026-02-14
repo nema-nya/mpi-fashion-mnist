@@ -8,52 +8,58 @@
 #define MAX_RANK 8
 
 typedef struct {
-    size_t dims[MAX_RANK];
-    size_t rank;
+  size_t dims[MAX_RANK];
+  size_t rank;
 } Shape;
 
 typedef struct {
-    float* data;
-    Shape shape;
-    size_t size;
+  float *data;
+  Shape shape;
+  size_t size;
 } Tensor;
 
-int tensor_alloc(Tensor* t, const Shape shape);
+int tensor_alloc(Tensor *t, const Shape shape);
 
-void tensor_free(Tensor* t);
+void tensor_free(Tensor *t);
 
-size_t tensor_size(const Tensor* t);
-size_t tensor_dim(const Tensor* t, size_t i);
+size_t tensor_size(const Tensor *t);
+size_t tensor_dim(const Tensor *t, size_t i);
 
-int tensor_same_shape(const Tensor* a, const Tensor* b);
+int tensor_same_shape(const Tensor *a, const Tensor *b);
 
-int tensor_mul(Tensor* a, const Tensor* b);
+int tensor_mul(Tensor *a, const Tensor *b);
 
-int tensor_add(Tensor* a, const Tensor* b);
+int tensor_add(Tensor *a, const Tensor *b);
 
-int tensor_fill(Tensor* t, float value);
+int tensor_fill(Tensor *t, float value);
 
-int tensor_zero(Tensor* t);
+int tensor_zero(Tensor *t);
 
-int tensor_scale(Tensor* t, float a);
+int tensor_scale(Tensor *t, float a);
 
-int tensor_fill_rand_uniform(Tensor* t, RNG* r);
+int tensor_fill_rand_uniform(Tensor *t, RNG *r);
 
-int tensor_fill_rand_normal(Tensor* t, RNG* r);
+int tensor_fill_rand_normal(Tensor *t, RNG *r);
 
-int tensor_copy(Tensor* dst, const Tensor* src);
+int tensor_copy(Tensor *dst, const Tensor *src);
 
-int tensor_clone(Tensor* dst, const Tensor* src);
+int tensor_clone(Tensor *dst, const Tensor *src);
 
-int tensor_axpy(Tensor* y, float a, const Tensor* x);
+int tensor_axpy(Tensor *y, float a, const Tensor *x);
 
-float tensor_get(const Tensor* t, size_t index);
+float tensor_get(const Tensor *t, size_t index);
 
-int tensor_index(const Tensor* t, ...);
+int tensor_index(const Shape shape, ...);
 
-int reshape(Tensor* t, const Shape shape);
+int tensor_index_array(const Shape shape, size_t *indicies);
 
-int permute(Tensor* t, ...);
+int tensor_unindex(const Shape shape, size_t ix, size_t *ixs);
+
+int reshape(Tensor *t, const Shape shape);
+
+int permute(Tensor *t, ...);
+
+int tensor_arange(Tensor *t);
 
 Shape shape1(size_t d0);
 

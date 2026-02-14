@@ -5,6 +5,6 @@
 
 #include "tensor.h"
 
-int bmm(Tensor* C, const Tensor* A, const Tensor* B);
+int bmm(Tensor *C, const Tensor *A, const Tensor *B);
 
 #endif
