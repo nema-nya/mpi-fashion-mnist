@@ -6,6 +6,7 @@
 #include "dataset.h"
 #include "linalg.h"
 #include "tensor.h"
+#include "utils.h"
 
 bool verify_endianness() {
   uint16_t dummy = 0x0100;
@@ -36,6 +37,11 @@ int main(void) {
     return 1;
   }
 
+  float *layer1_weight = (float *)read_all("data/layer1-weight.bin", NULL);
+  float *layer1_bias = (float *)read_all("data/layer1-bias.bin", NULL);
+  float *layer2_weight = (float *)read_all("data/layer2-weight.bin", NULL);
+  float *layer2_bias = (float *)read_all("data/layer1-bias.bin", NULL);
+
   // if (!tensor_fill(&t1, 1.5f) || !tensor_fill(&t2, 1.5f) ||
   // !tensor_zero(&t3)) {
   //   printf("tensor operation failed\n");
@@ -44,9 +50,9 @@ int main(void) {
   //   dataset_free(&d);
   //   return 1;
   // }
-  if (!bmm(&t3, &t1, &t2)) {
-    printf("failed\n");
-  }
+  // if (!bmm(&t3, &t1, &t2)) {
+  //   printf("failed\n");
+  // }
   // RNG rng = {0};
   // rng.state = 67;
   // tensor_fill_rand_normal(&t1, &rng);
@@ -60,12 +66,13 @@ int main(void) {
   // for (size_t i = 0; i < t1.size; ++i) {
   //   printf("%f ", t1.data[i]);
   // }
-  tensor_arange(&t1);
-  permute(&t1, 2, 1, 0);
-  for (size_t i = 0; i < t1.size; ++i) {
-    printf("%f ", t1.data[i]);
-  }
-  printf("\r\n");
+  // tensor_arange(&t1);
+  // permute(&t1, 2, 1, 0);
+  // for (size_t i = 0; i < t1.size; ++i) {
+  //   printf("%f ", t1.data[i]);
+  // }
+  // printf("\r\n");
+
   tensor_free(&t1);
   tensor_free(&t2);
 
