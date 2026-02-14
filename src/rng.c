@@ -1,8 +1,5 @@
 #include "rng.h"
 
-#include <stdlib.h>
-
-#include "tensor.h"
 
 void rng_seed(RNG* r, uint64_t seed) {
     r->state = seed ? seed : 0x9E3779B97F4A7C15ull;
