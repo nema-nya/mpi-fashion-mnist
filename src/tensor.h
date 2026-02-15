@@ -61,12 +61,18 @@ int permute(Tensor *t, ...);
 
 int tensor_arange(Tensor *t);
 
-int shape_expand(const Shape l, const Shape r, Shape* out);
+int shape_expand(const Shape l, const Shape r, Shape *out);
+
+bool shape_is_equal(const Shape a, const Shape b);
+
+int tensor_expand(const Tensor *src, Tensor *dest);
 
 Shape shape1(size_t d0);
 
 Shape shape2(size_t d0, size_t d1);
 
 Shape shape3(size_t d0, size_t d1, size_t d2);
+
+Shape shapeN(size_t rank, ...);
 
 #endif

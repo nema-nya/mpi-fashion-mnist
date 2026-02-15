@@ -256,6 +256,38 @@ int tensor_expand(const Tensor *src, Tensor *dest) {
     return 2;
   }
 
+  if (!shape_is_equal(dest->shape, shape_dest)) {
+    for (size_t i = 0; i < dest->shape.rank; ++i) {
+      printf("%zu ", dest->shape.dims[i]);
+    }
+    return 3;
+  }
+  size_t indicies[MAX_RANK];
+  size_t new_dims = dest->shape.rank - src->shape.rank;
+  for (size_t i = 0; i < dest->size; ++i) {
+    tensor_unindex(shape_dest, i, indicies);
+    for (size_t j = 0; j < dest->shape.rank; ++j) {
+      if (j < new_dims) {
+        indicies[j] = 0;
+      } else {
+        if (dest->shape.dims[j] > src->shape.dims[j - new_dims]) {
+          indicies[j] = 0;
+        }
+      }
+    }
+    for (size_t z = 0; z < dest->shape.rank; ++z) {
+      printf("%zu ", indicies[z]);
+    }
+    printf("\n\r");
+    for (size_t j = 0; j < dest->shape.rank; ++j) {
+      indicies[j] = indicies[j + new_dims];
+    }
+    size_t src_i = tensor_index_array(src->shape, indicies);
+    printf("i am setting dest data [%zu] to %.2f from src_i[%zu]\r\n", i,
+           src->data[src_i], src_i);
+    dest->data[i] = src->data[src_i];
+  }
+
   return 0;
 }
 
@@ -311,4 +343,16 @@ Shape shape2(size_t d0, size_t d1) {
 
 Shape shape3(size_t d0, size_t d1, size_t d2) {
   return (Shape){.dims = {d0, d1, d2}, .rank = 3};
+}
+
+Shape shapeN(size_t rank, ...) {
+  va_list args;
+  va_start(args);
+  Shape n;
+  n.rank = rank;
+  for (size_t i = 0; i < rank; ++i) {
+    size_t ix = va_arg(args, int);
+    n.dims[i] = ix;
+  }
+  return n;
 }
