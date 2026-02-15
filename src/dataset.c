@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "tensor.h"
 #include "utils.h"
 
 int dataset_load_bin(const char *labels_path, const char *data_path,
@@ -26,9 +27,18 @@ int dataset_load_bin(const char *labels_path, const char *data_path,
     goto cleanup;
   }
 
+  Shape x_shape = shapeN(2, n, IMG_SIZE);
+  Shape y_shape = shapeN(1, n);
+
+  Tensor *x = tensor_alloc(x_shape, DTYPE_FLOAT32);
+  Tensor *y = tensor_alloc(y_shape, DTYPE_UINT8);
+
+  x->data = data_buffer;
+  y->data = labels_buffer;
+
   out->n = n;
-  out->x = data_buffer;
-  out->y = labels_buffer;
+  out->x = x;
+  out->y = y;
   data_buffer = NULL;
   labels_buffer = NULL;
 

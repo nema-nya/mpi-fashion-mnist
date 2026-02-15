@@ -2,9 +2,11 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vcruntime.h>
 
 static size_t numel(const Shape shape) {
   size_t p = 1;
@@ -25,29 +27,41 @@ static int assert_tensors(const Tensor *a, const Tensor *b) {
   return 1;
 }
 
-int tensor_alloc(Tensor *t, const Shape shape) {
+size_t dtype_byte_count(const Dtype dtype) {
+  if (dtype == DTYPE_FLOAT32) {
+    return sizeof(float);
+  } else if (dtype == DTYPE_UINT8) {
+    return sizeof(uint8_t);
+  }
+}
+
+Tensor *tensor_alloc(const Shape shape, const Dtype dtype) {
+  Tensor *t = (Tensor *)malloc(sizeof(Tensor));
+  if (tensor_init(t, shape, dtype))
+    return NULL;
+  return t;
+}
+
+int tensor_init(Tensor *t, const Shape shape, const Dtype dtype) {
   if (!t)
-    return 0;
-  if (shape.rank == 0 || shape.rank > MAX_RANK)
-    return 0;
+    return 1;
+  if (shape.rank > MAX_RANK)
+    return 2;
   for (size_t i = 0; i < shape.rank; ++i)
     if (shape.dims[i] == 0)
-      return 0;
-
+      return 3;
   free(t->data);
-
   t->data = NULL;
   t->shape = shape;
   t->size = numel(shape);
-  t->data = (float *)malloc(t->size * sizeof(float));
+  t->dtype = dtype;
+  t->data = malloc(dtype_byte_count(dtype) * t->size);
 
   if (!t->data) {
-    t->size = 0;
-    t->shape.rank = 0;
-    return 0;
+    return 4;
   }
 
-  return 1;
+  return 0;
 }
 
 void tensor_free(Tensor *t) {
@@ -83,85 +97,116 @@ int tensor_same_shape(const Tensor *a, const Tensor *b) {
 
 int tensor_mul(Tensor *a, const Tensor *b) {
   if (!assert_tensors(a, b))
-    return 0;
-  for (size_t i = 0; i < a->size; ++i)
-    a->data[i] *= b->data[i];
-  return 1;
+    return 1;
+  if (a->dtype == DTYPE_FLOAT32) {
+    float *a_float_data = (float *)a->data;
+    float *b_float_data = (float *)b->data;
+    for (size_t i = 0; i < a->size; ++i) {
+      a_float_data[i] *= b_float_data[i];
+    }
+  } else if (a->dtype == DTYPE_UINT8) {
+    uint8_t *a_uint8_data = (uint8_t *)a->data;
+    uint8_t *b_uint8_data = (uint8_t *)b->data;
+    for (size_t i = 0; i < a->size; ++i) {
+      a_uint8_data[i] *= b_uint8_data[i];
+    }
+  }
+  return 0;
 }
 
 int tensor_add(Tensor *a, const Tensor *b) {
   if (!assert_tensors(a, b))
-    return 0;
-  for (size_t i = 0; i < a->size; ++i)
-    a->data[i] += b->data[i];
-  return 1;
+    return 1;
+  if (a->dtype == DTYPE_FLOAT32) {
+    float *a_float_data = (float *)a->data;
+    float *b_float_data = (float *)b->data;
+    for (size_t i = 0; i < a->size; ++i) {
+      a_float_data[i] += b_float_data[i];
+    }
+  } else if (a->dtype == DTYPE_UINT8) {
+    uint8_t *a_uint8_data = (uint8_t *)a->data;
+    uint8_t *b_uint8_data = (uint8_t *)b->data;
+    for (size_t i = 0; i < a->size; ++i) {
+      a_uint8_data[i] += b_uint8_data[i];
+    }
+  }
+  return 0;
 }
 
-int tensor_fill(Tensor *t, float value) {
+int tensor_fill_float(Tensor *t, float value) {
   if (!t || !t->data)
-    return 0;
+    return 1;
+
+  float *t_float_data = (float *)t->data;
   for (size_t i = 0; i < t->size; ++i)
-    t->data[i] = value;
-  return 1;
+    t_float_data[i] = value;
+  return 0;
 }
 
-int tensor_zero(Tensor *t) { return tensor_fill(t, 0.0f); }
-
-int tensor_scale(Tensor *t, float a) {
+int tensor_fill_uint8(Tensor *t, uint8_t value) {
   if (!t || !t->data)
-    return 0;
+    return 1;
+
+  uint8_t *t_uint8_data = (uint8_t *)t->data;
   for (size_t i = 0; i < t->size; ++i)
-    t->data[i] *= a;
-  return 1;
+    t_uint8_data[i] = value;
+  return 0;
+}
+
+int tensor_zero_float(Tensor *t) { return tensor_fill_float(t, 0.0f); }
+
+int tensor_zero_uint8(Tensor *t) { return tensor_fill_uint8(t, 0); }
+
+int tensor_scale_float(Tensor *t, float a) {
+  if (!t || !t->data)
+    return 1;
+
+  float *t_float_data = (float *)t->data;
+  for (size_t i = 0; i < t->size; ++i)
+    t_float_data[i] *= a;
+  return 0;
+}
+
+int tensor_scale_uint8(Tensor *t, uint8_t a) {
+  if (!t || !t->data)
+    return 1;
+
+  uint8_t *t_uint_data = (uint8_t *)t->data;
+  for (size_t i = 0; i < t->size; ++i)
+    t_uint_data[i] *= a;
+  return 0;
 }
 
 int tensor_copy(Tensor *dst, const Tensor *src) {
   if (!assert_tensors(dst, src))
-    return 0;
-  for (size_t i = 0; i < src->size; ++i)
-    dst->data[i] = src->data[i];
-  return 1;
+    return 1;
+
+  memcpy(dst->data, src->data, dst->size);
+  return 0;
 }
 
-int tensor_clone(Tensor *dst, const Tensor *src) {
-  if (!dst || !src)
-    return 0;
-  if (!src->data)
-    return 0;
-  if (!tensor_alloc(dst, src->shape))
-    return 0;
-
-  for (size_t i = 0; i < src->size; ++i)
-    dst->data[i] = src->data[i];
-  return 1;
-}
-
-int tensor_axpy(Tensor *y, float a, const Tensor *x) {
-  if (!assert_tensors(y, x))
-    return 0;
-
-  for (size_t i = 0; i < y->size; ++i)
-    y->data[i] += a * x->data[i];
-  return 1;
-}
-
-float tensor_get(const Tensor *t, size_t index) {
-  if (!t || !t->data || index >= t->size)
-    return 0.0f;
-  return t->data[index];
-}
 int tensor_fill_rand_uniform(Tensor *t, RNG *r) {
   if (!t || !t->data || !r)
-    return 0;
+    return 1;
+  if (t->dtype != DTYPE_FLOAT32)
+    return 2;
+
+  float *float_data = (float *)t->data;
   for (size_t i = 0; i < t->size; ++i)
-    t->data[i] = rng_uniform(r);
+    float_data[i] = rng_uniform(r);
   return 1;
 }
+
 int tensor_fill_rand_normal(Tensor *t, RNG *r) {
   if (!t || !t->data || !r)
-    return 0;
+    return 1;
+
+  if (t->dtype != DTYPE_FLOAT32)
+    return 2;
+
+  float *float_data = (float *)t->data;
   for (size_t i = 0; i < t->size; ++i)
-    t->data[i] = rng_normal(r);
+    float_data[i] = rng_normal(r);
   return 1;
 }
 
@@ -206,6 +251,10 @@ int tensor_unindex(const Shape shape, size_t ix, size_t *ixs) {
   return 0;
 }
 
+size_t tensor_byte_count(const Tensor *t) {
+  return t->size * dtype_byte_count(t->dtype);
+}
+
 int permute(Tensor *t, ...) {
   // TODO: implement without buffer.
   if (!t)
@@ -224,24 +273,48 @@ int permute(Tensor *t, ...) {
   }
   size_t indicies[MAX_RANK];
   size_t permuted_indicies[MAX_RANK];
-  float *new_buffer = (float *)malloc(t->size * sizeof(float));
-  memcpy(new_buffer, t->data, t->size * sizeof(float));
-  for (size_t i = 0; i < t->size; ++i) {
-    tensor_unindex(t->shape, i, indicies);
-    for (size_t j = 0; j < t->shape.rank; ++j) {
-      permuted_indicies[j] = indicies[permutation[j]];
+  void *new_buffer = (void *)malloc(tensor_byte_count(t));
+  memcpy(new_buffer, t->data, tensor_byte_count(t));
+  if (t->dtype == DTYPE_FLOAT32) {
+    float *data = (float *)t->data;
+    float *new_data = (float *)new_buffer;
+    for (size_t i = 0; i < t->size; ++i) {
+      tensor_unindex(t->shape, i, indicies);
+      for (size_t j = 0; j < t->shape.rank; ++j) {
+        permuted_indicies[j] = indicies[permutation[j]];
+      }
+      size_t new_i = tensor_index_array(s, permuted_indicies);
+      data[new_i] = new_data[i];
     }
-    size_t new_i = tensor_index_array(s, permuted_indicies);
-    t->data[new_i] = new_buffer[i];
+  } else if (t->dtype == DTYPE_UINT8) {
+    uint8_t *data = (uint8_t *)t->data;
+    uint8_t *new_data = (uint8_t *)new_buffer;
+    for (size_t i = 0; i < t->size; ++i) {
+      tensor_unindex(t->shape, i, indicies);
+      for (size_t j = 0; j < t->shape.rank; ++j) {
+        permuted_indicies[j] = indicies[permutation[j]];
+      }
+      size_t new_i = tensor_index_array(s, permuted_indicies);
+      data[new_i] = new_data[i];
+    }
   }
   t->shape = s;
   free(new_buffer);
   return 0;
 }
 
-int tensor_arange(Tensor *t) {
+int tensor_arange_float(Tensor *t) {
+  float *data = (float *)t->data;
   for (size_t i = 0; i < t->size; ++i) {
-    t->data[i] = i;
+    data[i] = i;
+  }
+  return 0;
+}
+
+int tensor_arange_uint8(Tensor *t) {
+  uint8_t *data = (uint8_t *)t->data;
+  for (size_t i = 0; i < t->size; ++i) {
+    data[i] = i;
   }
   return 0;
 }
@@ -257,9 +330,6 @@ int tensor_expand(const Tensor *src, Tensor *dest) {
   }
 
   if (!shape_is_equal(dest->shape, shape_dest)) {
-    for (size_t i = 0; i < dest->shape.rank; ++i) {
-      printf("%zu ", dest->shape.dims[i]);
-    }
     return 3;
   }
   size_t indicies[MAX_RANK];
@@ -275,19 +345,24 @@ int tensor_expand(const Tensor *src, Tensor *dest) {
         }
       }
     }
-    for (size_t z = 0; z < dest->shape.rank; ++z) {
-      printf("%zu ", indicies[z]);
+    if (dest->dtype == DTYPE_FLOAT32) {
+      float *dest_data = (float *)dest->data;
+      float *src_data = (float *)src->data;
+      for (size_t j = 0; j < dest->shape.rank; ++j) {
+        indicies[j] = indicies[j + new_dims];
+      }
+      size_t src_i = tensor_index_array(src->shape, indicies);
+      dest_data[i] = src_data[src_i];
+    } else if (dest->dtype == DTYPE_UINT8) {
+      uint8_t *dest_data = (uint8_t *)dest->data;
+      uint8_t *src_data = (uint8_t *)src->data;
+      for (size_t j = 0; j < dest->shape.rank; ++j) {
+        indicies[j] = indicies[j + new_dims];
+      }
+      size_t src_i = tensor_index_array(src->shape, indicies);
+      dest_data[i] = src_data[src_i];
     }
-    printf("\n\r");
-    for (size_t j = 0; j < dest->shape.rank; ++j) {
-      indicies[j] = indicies[j + new_dims];
-    }
-    size_t src_i = tensor_index_array(src->shape, indicies);
-    printf("i am setting dest data [%zu] to %.2f from src_i[%zu]\r\n", i,
-           src->data[src_i], src_i);
-    dest->data[i] = src->data[src_i];
   }
-
   return 0;
 }
 
@@ -355,4 +430,26 @@ Shape shapeN(size_t rank, ...) {
     n.dims[i] = ix;
   }
   return n;
+}
+
+void print_shape(const Tensor *t) {
+  for (size_t i = 0; i < t->shape.rank; ++i) {
+    printf("%zu ", t->shape.dims[i]);
+  }
+  printf("\n\r");
+}
+
+void print_tensor(const Tensor *t) {
+  if (t->dtype == DTYPE_FLOAT32) {
+    float *data = (float *)t->data;
+    for (size_t i = 0; i < t->size; ++i) {
+      printf("%.0f ", data[i]);
+    }
+  } else if (t->dtype == DTYPE_UINT8) {
+    size_t *data = (size_t *)t->data;
+    for (size_t i = 0; i < t->size; ++i) {
+      printf("%zu ", data[i]);
+    }
+  }
+  printf("\n\r");
 }
