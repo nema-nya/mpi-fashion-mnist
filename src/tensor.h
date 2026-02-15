@@ -78,6 +78,8 @@ bool shape_is_equal(const Shape a, const Shape b);
 
 int tensor_expand(const Tensor *src, Tensor *dest);
 
+int tensor_slice(const Tensor* src, Tensor* dest , size_t dim, size_t start, size_t end);
+
 Shape shape1(size_t d0);
 
 Shape shape2(size_t d0, size_t d1);

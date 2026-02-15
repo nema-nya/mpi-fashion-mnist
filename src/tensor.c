@@ -50,8 +50,6 @@ int tensor_init(Tensor *t, const Shape shape, const Dtype dtype) {
   for (size_t i = 0; i < shape.rank; ++i)
     if (shape.dims[i] == 0)
       return 3;
-  free(t->data);
-  t->data = NULL;
   t->shape = shape;
   t->size = numel(shape);
   t->dtype = dtype;
@@ -233,13 +231,13 @@ int tensor_index_array(const Shape shape, size_t *indicies) {
 
 int reshape(Tensor *t, const Shape shape) {
   if (!t)
-    return 0;
+    return 1;
   int t_shape_size = numel(t->shape);
   int s_shape_size = numel(shape);
   if (t_shape_size != s_shape_size)
-    return 0;
+    return 2;
   t->shape = shape;
-  return 1;
+  return 0;
 }
 
 int tensor_unindex(const Shape shape, size_t ix, size_t *ixs) {
@@ -366,6 +364,48 @@ int tensor_expand(const Tensor *src, Tensor *dest) {
   return 0;
 }
 
+int tensor_slice(const Tensor *src, Tensor *dest, size_t dim, size_t start,
+                 size_t end) {
+  if (src->shape.rank != dest->shape.rank) {
+    return 1;
+  }
+  for (size_t i = 0; i < src->shape.rank; ++i) {
+    if (i == dim) {
+      if (dest->shape.dims[i] != end - start) {
+        return 2;
+      } else if (src->shape.dims[i] != dest->shape.dims[i]) {
+        return 3;
+      }
+    }
+  }
+
+  if (src->dtype != dest->dtype) {
+    return 4;
+  }
+
+  size_t indicies[MAX_RANK];
+  if (src->dtype == DTYPE_FLOAT32) {
+    float *src_data = (float *)src->data;
+    float *dest_data = (float *)dest->data;
+    for (size_t i = 0; i < dest->size; ++i) {
+      tensor_unindex(dest->shape, i, indicies);
+      indicies[dim] = indicies[dim] + start;
+      size_t src_i = tensor_index_array(src->shape, indicies);
+      dest_data[src_i] = src_data[i];
+    }
+  } else if (src->dtype == DTYPE_UINT8) {
+    uint8_t *src_data = (uint8_t *)src->data;
+    uint8_t *dest_data = (uint8_t *)dest->data;
+    for (size_t i = 0; i < dest->size; ++i) {
+      tensor_unindex(dest->shape, i, indicies);
+      indicies[dim] = indicies[dim] + start;
+      size_t src_i = tensor_index_array(src->shape, indicies);
+      dest_data[src_i] = src_data[i];
+    }
+  }
+  return 0;
+}
+
 bool shape_is_equal(const Shape a, const Shape b) {
   if (a.rank != b.rank) {
     return false;
@@ -443,12 +483,12 @@ void print_tensor(const Tensor *t) {
   if (t->dtype == DTYPE_FLOAT32) {
     float *data = (float *)t->data;
     for (size_t i = 0; i < t->size; ++i) {
-      printf("%.0f ", data[i]);
+      printf("%f ", data[i]);
     }
   } else if (t->dtype == DTYPE_UINT8) {
-    size_t *data = (size_t *)t->data;
+    uint8_t *data = (uint8_t *)t->data;
     for (size_t i = 0; i < t->size; ++i) {
-      printf("%zu ", data[i]);
+      printf("%hhu ", data[i]);
     }
   }
   printf("\n\r");
