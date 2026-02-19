@@ -88,7 +88,15 @@ int main(void) {
   // 1 forward pass
   Tensor *hidden_1 = tensor_alloc(shapeN(3, 100, 1, 256), DTYPE_FLOAT32);
   int ret = bmm(hidden_1, d.x, layer1_weight);
-  printf("ret - %d", ret);
+  printf("ret - %d\n", ret);
+  fflush(stdout);
+  printf("A rank=%zu dims=%zu,%zu,%zu\n", d.x->shape.rank,
+       d.x->shape.dims[0], d.x->shape.dims[1], d.x->shape.dims[2]);
+  printf("B rank=%zu dims=%zu,%zu,%zu\n", layer1_weight->shape.rank,
+         layer1_weight->shape.dims[0], layer1_weight->shape.dims[1], layer1_weight->shape.dims[2]);
+  printf("C rank=%zu dims=%zu,%zu,%zu\n", hidden_1->shape.rank,
+         hidden_1->shape.dims[0], hidden_1->shape.dims[1], hidden_1->shape.dims[2]);
+
   print_tensor(hidden_1); 
   tensor_free(&t1);
   tensor_free(&t2);

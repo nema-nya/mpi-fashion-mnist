@@ -2,7 +2,6 @@
 #include "tensor.h"
 
 #include <stddef.h>
-#include <stdio.h>
 
 int bmm(Tensor *C, const Tensor *A, const Tensor *B) {
   if (!C || !A || !B)

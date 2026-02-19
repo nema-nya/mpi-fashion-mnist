@@ -60,6 +60,9 @@ int dataset_load_csv(const char *path, Dataset *out) {
   size_t n = 0;
   size_t buffer_size = 1024 * 16;
 
+  Tensor *label_tensor = tensor_alloc(shapeN(1, 60000), DTYPE_UINT8);
+  Tensor *images_tensor = tensor_alloc(shapeN(3, 784, 1, 60000), DTYPE_FLOAT32);
+
   uint8_t *labels = NULL;
   float *images = NULL;
   char buffer[buffer_size];
@@ -121,9 +124,12 @@ int dataset_load_csv(const char *path, Dataset *out) {
     n++;
   }
 
+  label_tensor->data = labels;
+  images_tensor->data = images;
+
   out->n = n;
-  out->y = labels;
-  out->x = images;
+  out->y = label_tensor;
+  out->x = images_tensor;
   labels = NULL;
   images = NULL;
   ok = 1;
