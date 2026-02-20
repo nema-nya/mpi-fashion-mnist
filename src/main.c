@@ -26,12 +26,19 @@ int main(void) {
   }
   Tensor *new_x = tensor_alloc(shapeN(3, 100, 1, 784), DTYPE_FLOAT32);
   Tensor *new_y = tensor_alloc(shapeN(1, 100), DTYPE_UINT8);
-  tensor_slice(d.x, new_x, 0, 0, 100);
-  tensor_slice(d.y, new_y, 0, 0, 100);
+  // print_tensor(d.x);
+  
+  reshape(d.x, shapeN(3, 60000, 1, 784));
+  print_shape(d.x);
+  int ts_ret1 = tensor_slice(d.x, new_x, 0, 0, 100);
+  int ts_ret2 = tensor_slice(d.y, new_y, 0, 0, 100);
+  // print_tensor(new_x);
+  printf("ts1 %d ts2 %d\n", ts_ret1, ts_ret2);
   free(d.x);
   free(d.y);
   d.x = new_x;
   d.y = new_y;
+  // print_tensor(d.x);
   printf("loaded %zu samples\n", d.n);
 
   Tensor t1 = {0};
@@ -87,6 +94,8 @@ int main(void) {
   printf("rs_ret2 - %d\r\n", rs_ret2);
   // 1 forward pass
   Tensor *hidden_1 = tensor_alloc(shapeN(3, 100, 1, 256), DTYPE_FLOAT32);
+  // print_tensor(hidden_1);
+  // print_tensor(d.x);
   int ret = bmm(hidden_1, d.x, layer1_weight);
   printf("ret - %d\n", ret);
   fflush(stdout);
@@ -97,7 +106,7 @@ int main(void) {
   printf("C rank=%zu dims=%zu,%zu,%zu\n", hidden_1->shape.rank,
          hidden_1->shape.dims[0], hidden_1->shape.dims[1], hidden_1->shape.dims[2]);
 
-  print_tensor(hidden_1); 
+  // print_tensor(hidden_1);
   tensor_free(&t1);
   tensor_free(&t2);
   dataset_free(&d);

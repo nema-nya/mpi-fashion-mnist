@@ -33,6 +33,7 @@ size_t dtype_byte_count(const Dtype dtype) {
   } else if (dtype == DTYPE_UINT8) {
     return sizeof(uint8_t);
   }
+  return 0;
 }
 
 Tensor *tensor_alloc(const Shape shape, const Dtype dtype) {
@@ -179,7 +180,7 @@ int tensor_copy(Tensor *dst, const Tensor *src) {
   if (!assert_tensors(dst, src))
     return 1;
 
-  memcpy(dst->data, src->data, dst->size);
+  memcpy(dst->data, src->data, tensor_byte_count(dst));
   return 0;
 }
 
@@ -192,7 +193,7 @@ int tensor_fill_rand_uniform(Tensor *t, RNG *r) {
   float *float_data = (float *)t->data;
   for (size_t i = 0; i < t->size; ++i)
     float_data[i] = rng_uniform(r);
-  return 1;
+  return 0;
 }
 
 int tensor_fill_rand_normal(Tensor *t, RNG *r) {
@@ -205,7 +206,7 @@ int tensor_fill_rand_normal(Tensor *t, RNG *r) {
   float *float_data = (float *)t->data;
   for (size_t i = 0; i < t->size; ++i)
     float_data[i] = rng_normal(r);
-  return 1;
+  return 0;
 }
 
 int tensor_index(const Shape shape, ...) {
@@ -220,7 +221,7 @@ int tensor_index(const Shape shape, ...) {
   return out;
 }
 
-int tensor_index_array(const Shape shape, size_t *indicies) {
+int tensor_index_array(const Shape shape, const size_t *indicies) {
   int out = 0;
   for (size_t i = 0; i < shape.rank; ++i) {
     out *= shape.dims[i];
@@ -371,12 +372,13 @@ int tensor_slice(const Tensor *src, Tensor *dest, size_t dim, size_t start,
   }
   for (size_t i = 0; i < src->shape.rank; ++i) {
     if (i == dim) {
-      if (dest->shape.dims[i] != end - start) {
+      if (dest->shape.dims[i] != (end - start)) {
         return 2;
-      } else if (src->shape.dims[i] != dest->shape.dims[i]) {
-        return 3;
       }
     }
+    else  if (src->shape.dims[i] != dest->shape.dims[i]) {
+        return 3;
+      }
   }
 
   if (src->dtype != dest->dtype) {
@@ -389,18 +391,18 @@ int tensor_slice(const Tensor *src, Tensor *dest, size_t dim, size_t start,
     float *dest_data = (float *)dest->data;
     for (size_t i = 0; i < dest->size; ++i) {
       tensor_unindex(dest->shape, i, indicies);
-      indicies[dim] = indicies[dim] + start;
+      indicies[dim] += start;
       size_t src_i = tensor_index_array(src->shape, indicies);
-      dest_data[src_i] = src_data[i];
+      dest_data[i] = src_data[src_i];
     }
   } else if (src->dtype == DTYPE_UINT8) {
     uint8_t *src_data = (uint8_t *)src->data;
     uint8_t *dest_data = (uint8_t *)dest->data;
     for (size_t i = 0; i < dest->size; ++i) {
       tensor_unindex(dest->shape, i, indicies);
-      indicies[dim] = indicies[dim] + start;
+      indicies[dim] += start;
       size_t src_i = tensor_index_array(src->shape, indicies);
-      dest_data[src_i] = src_data[i];
+      dest_data[i] = src_data[src_i];
     }
   }
   return 0;

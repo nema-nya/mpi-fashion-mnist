@@ -56,7 +56,7 @@ int tensor_copy(Tensor *dst, const Tensor *src);
 
 int tensor_index(const Shape shape, ...);
 
-int tensor_index_array(const Shape shape, size_t *indicies);
+int tensor_index_array(const Shape shape, const size_t *indicies);
 
 int tensor_unindex(const Shape shape, size_t ix, size_t *ixs);
 

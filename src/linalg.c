@@ -2,6 +2,7 @@
 #include "tensor.h"
 
 #include <stddef.h>
+#include <stdio.h>
 
 int bmm(Tensor *C, const Tensor *A, const Tensor *B) {
   if (!C || !A || !B)
@@ -29,6 +30,7 @@ int bmm(Tensor *C, const Tensor *A, const Tensor *B) {
               tensor_index(B->shape, i % B->shape.dims[0], l % B->shape.dims[1],
                            k % B->shape.dims[2]);
           sum += a_data[a_index] * b_data[b_index];
+          // printf("a_index %zu b_index %zu c_index %zu\n", a_index, b_index, c_index);
         }
         c_data[c_index] = sum;
       }
