@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static size_t max(size_t a, size_t b) { return a > b ? a : b; }
+// static size_t max(size_t a, size_t b) { return a > b ? a : b; }
 
 static size_t numel(const Shape shape) {
   size_t p = 1;
@@ -113,7 +113,7 @@ int tensor_mul(Tensor *a, const Tensor *b) {
   return 0;
 }
 
-int tensor_add(Tensor *a, const Tensor *b) {
+int old_tensor_add(Tensor *a, const Tensor *b) {
   if (!assert_tensors(a, b))
     return 1;
   if (a->dtype == DTYPE_FLOAT32) {
@@ -485,6 +485,9 @@ void print_tensor(const Tensor *t) {
   if (t->dtype == DTYPE_FLOAT32) {
     float *data = (float *)t->data;
     for (size_t i = 0; i < t->size; ++i) {
+      if (i > 10) {
+        break;
+      }
       printf("%f ", data[i]);
     }
   } else if (t->dtype == DTYPE_UINT8) {

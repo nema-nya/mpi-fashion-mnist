@@ -34,7 +34,7 @@ int tensor_same_shape(const Tensor *a, const Tensor *b);
 
 int tensor_mul(Tensor *a, const Tensor *b);
 
-int tensor_add(Tensor *a, const Tensor *b);
+int old_tensor_add(Tensor *a, const Tensor *b);
 
 int tensor_fill_float(Tensor *t, float value);
 

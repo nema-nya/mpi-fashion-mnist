@@ -7,4 +7,6 @@
 
 int bmm(Tensor *C, const Tensor *A, const Tensor *B);
 
+int tensor_add(Tensor* a, const Tensor* b);
+
 #endif

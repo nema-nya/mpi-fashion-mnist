@@ -2,6 +2,7 @@
 #include "tensor.h"
 
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 int bmm(Tensor *C, const Tensor *A, const Tensor *B) {
@@ -30,10 +31,64 @@ int bmm(Tensor *C, const Tensor *A, const Tensor *B) {
               tensor_index(B->shape, i % B->shape.dims[0], l % B->shape.dims[1],
                            k % B->shape.dims[2]);
           sum += a_data[a_index] * b_data[b_index];
-          // printf("a_index %zu b_index %zu c_index %zu\n", a_index, b_index, c_index);
+          // printf("a_index %zu b_index %zu c_index %zu\n", a_index, b_index,
+          // c_index);
         }
         c_data[c_index] = sum;
       }
+    }
+  }
+  return 0;
+}
+
+int tensor_add(Tensor *a, const Tensor *b) {
+  if (!a || !b) {
+    return 1;
+  }
+
+  if (a->dtype != b->dtype) {
+    return 2;
+  }
+
+  Shape shape_dest;
+  if (shape_expand(a->shape, b->shape, &shape_dest)) {
+    return 3;
+  }
+
+  if (!shape_is_equal(a->shape, shape_dest)) {
+    return 4;
+  }
+  size_t b_indicies[MAX_RANK];
+  size_t new_dims = shape_dest.rank - b->shape.rank;
+  for (size_t i = 0; i < a->size; ++i) {
+    tensor_unindex(shape_dest, i, b_indicies);
+
+    for (size_t j = 0; j < shape_dest.rank; ++j) {
+      if (j < new_dims) {
+        b_indicies[j] = 0;
+      } else {
+        if (shape_dest.dims[j] > b->shape.dims[j - new_dims]) {
+          b_indicies[j] = 0;
+        }
+      }
+    }
+
+    if (b->dtype == DTYPE_FLOAT32) {
+      float *a_data = (float *)a->data;
+      float *b_data = (float *)b->data;
+      for (size_t j = 0; j < b->shape.rank; ++j) {
+        b_indicies[j] = b_indicies[j + new_dims];
+      }
+      size_t src_i = tensor_index_array(b->shape, b_indicies);
+      a_data[i] += b_data[src_i];
+    } else if (b->dtype == DTYPE_UINT8) {
+      uint8_t *a_data = (uint8_t *)a->data;
+      uint8_t *b_data = (uint8_t *)b->data;
+      for (size_t j = 0; j < b->shape.rank; ++j) {
+        b_indicies[j] = b_indicies[j + new_dims];
+      }
+      size_t src_i = tensor_index_array(b->shape, b_indicies);
+      a_data[i] += b_data[src_i];
     }
   }
   return 0;
