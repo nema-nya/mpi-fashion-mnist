@@ -1,6 +1,7 @@
 #include "linalg.h"
 #include "tensor.h"
 
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -91,5 +92,20 @@ int tensor_add(Tensor *a, const Tensor *b) {
       a_data[i] += b_data[src_i];
     }
   }
+  return 0;
+}
+
+int tensor_tanh(Tensor* a) {
+  if (a == NULL) {
+    return 1;
+  }
+  if (a->dtype != DTYPE_FLOAT32) {
+    return 2;
+  }
+  float* a_data = (float*)a->data;
+  for (size_t i = 0; i < a->size; ++i) {
+    a_data[i] = tanh(a_data[i]);
+  }
+
   return 0;
 }
