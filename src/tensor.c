@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// static size_t max(size_t a, size_t b) { return a > b ? a : b; }
+static size_t max_sz(size_t a, size_t b) { return a > b ? a : b; }
 
 static size_t numel(const Shape shape) {
   size_t p = 1;
@@ -38,8 +38,10 @@ size_t dtype_byte_count(const Dtype dtype) {
 
 Tensor *tensor_alloc(const Shape shape, const Dtype dtype) {
   Tensor *t = (Tensor *)malloc(sizeof(Tensor));
-  if (tensor_init(t, shape, dtype))
+  if (tensor_init(t, shape, dtype)) {
+    free(t);
     return NULL;
+  }
   return t;
 }
 
@@ -209,7 +211,7 @@ int tensor_fill_rand_normal(Tensor *t, RNG *r) {
   return 0;
 }
 
-int tensor_index(const Shape shape, ...) {
+size_t tensor_index(const Shape shape, ...) {
   va_list args;
   va_start(args);
   int out = 0;
@@ -218,11 +220,12 @@ int tensor_index(const Shape shape, ...) {
     out *= shape.dims[i];
     out += ix;
   }
+  va_end(args);
   return out;
 }
 
-int tensor_index_array(const Shape shape, const size_t *indicies) {
-  int out = 0;
+size_t tensor_index_array(const Shape shape, const size_t *indicies) {
+  size_t out = 0;
   for (size_t i = 0; i < shape.rank; ++i) {
     out *= shape.dims[i];
     out += indicies[i];
@@ -233,8 +236,8 @@ int tensor_index_array(const Shape shape, const size_t *indicies) {
 int reshape(Tensor *t, const Shape shape) {
   if (!t)
     return 1;
-  int t_shape_size = numel(t->shape);
-  int s_shape_size = numel(shape);
+  size_t t_shape_size = numel(t->shape);
+  size_t s_shape_size = numel(shape);
   if (t_shape_size != s_shape_size)
     return 2;
   t->shape = shape;
@@ -257,7 +260,7 @@ size_t tensor_byte_count(const Tensor *t) {
 int permute(Tensor *t, ...) {
   // TODO: implement without buffer.
   if (!t)
-    return 0;
+    return 1;
   va_list args;
   va_start(args);
   size_t permutation[MAX_RANK];
@@ -265,6 +268,7 @@ int permute(Tensor *t, ...) {
     int ix = va_arg(args, int);
     permutation[i] = ix;
   }
+  va_end(args);
   Shape s;
   s.rank = t->shape.rank;
   for (size_t i = 0; i < s.rank; ++i) {
@@ -303,6 +307,10 @@ int permute(Tensor *t, ...) {
 }
 
 int tensor_arange_float(Tensor *t) {
+  if (!t)
+    return 1;
+  if (t->dtype != DTYPE_FLOAT32)
+    return 2;
   float *data = (float *)t->data;
   for (size_t i = 0; i < t->size; ++i) {
     data[i] = i;
@@ -311,6 +319,10 @@ int tensor_arange_float(Tensor *t) {
 }
 
 int tensor_arange_uint8(Tensor *t) {
+  if (!t)
+    return 1;
+  if (t->dtype != DTYPE_UINT8)
+    return 2;
   uint8_t *data = (uint8_t *)t->data;
   for (size_t i = 0; i < t->size; ++i) {
     data[i] = i;
@@ -375,10 +387,9 @@ int tensor_slice(const Tensor *src, Tensor *dest, size_t dim, size_t start,
       if (dest->shape.dims[i] != (end - start)) {
         return 2;
       }
+    } else if (src->shape.dims[i] != dest->shape.dims[i]) {
+      return 3;
     }
-    else  if (src->shape.dims[i] != dest->shape.dims[i]) {
-        return 3;
-      }
   }
 
   if (src->dtype != dest->dtype) {
@@ -421,7 +432,7 @@ bool shape_is_equal(const Shape a, const Shape b) {
 }
 
 int shape_expand(const Shape l, const Shape r, Shape *out) {
-  size_t max_rank = max(l.rank, r.rank);
+  size_t max_rank = max_sz(l.rank, r.rank);
   Shape l_ex;
   Shape r_ex;
   l_ex.rank = max_rank;
@@ -471,6 +482,7 @@ Shape shapeN(size_t rank, ...) {
     size_t ix = va_arg(args, int);
     n.dims[i] = ix;
   }
+  va_end(args);
   return n;
 }
 

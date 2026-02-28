@@ -32,7 +32,8 @@ int dataset_load_bin(const char *labels_path, const char *data_path,
 
   Tensor *x = tensor_alloc(x_shape, DTYPE_FLOAT32);
   Tensor *y = tensor_alloc(y_shape, DTYPE_UINT8);
-
+  free(x->data);
+  free(y->data);
   x->data = data_buffer;
   y->data = labels_buffer;
 

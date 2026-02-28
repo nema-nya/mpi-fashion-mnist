@@ -95,14 +95,14 @@ int tensor_add(Tensor *a, const Tensor *b) {
   return 0;
 }
 
-int tensor_tanh(Tensor* a) {
+int tensor_tanh(Tensor *a) {
   if (a == NULL) {
     return 1;
   }
   if (a->dtype != DTYPE_FLOAT32) {
     return 2;
   }
-  float* a_data = (float*)a->data;
+  float *a_data = (float *)a->data;
   for (size_t i = 0; i < a->size; ++i) {
     a_data[i] = tanh(a_data[i]);
   }

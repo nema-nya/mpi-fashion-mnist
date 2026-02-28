@@ -19,7 +19,12 @@ void *read_all(const char *path, size_t *n) {
     goto on_error;
   }
 
-  size_t data_size = ftell(file);
+  long ftell_result = ftell(file);
+
+  if (ftell_result < 0) {
+    goto on_error;
+  }
+  size_t data_size = (size_t)ftell_result;
 
   if (fseek(file, 0, SEEK_SET)) {
     goto on_error;

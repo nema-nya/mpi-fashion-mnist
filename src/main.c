@@ -134,7 +134,6 @@ int main(void) {
   ret = tensor_add(out, b);
   printf("tensor add ret %d\n", ret);
   print_tensor(out);
-
   tensor_free(&t1);
   tensor_free(&t2);
   dataset_free(&d);
