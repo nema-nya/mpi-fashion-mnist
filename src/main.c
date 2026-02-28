@@ -104,6 +104,38 @@ int main(void) {
   printf("ret - %d\n", ret);
 
   print_tensor(hidden_1);
+
+  tensor_tanh(hidden_1);
+  print_tensor(hidden_1);
+  printf("=====================\n");
+  Tensor *hidden_2 = tensor_alloc(shapeN(3, 100, 1, 10), DTYPE_FLOAT32);
+  reshape(layer2_weight, shapeN(3, 1, 256, 10));
+  // print_tensor(hidden_1);
+  // print_tensor(d.x);
+  ret = bmm(hidden_2, hidden_1, layer2_weight);
+  printf("ret - %d\n", ret);
+  print_tensor(hidden_2);
+  ret = tensor_add(hidden_2, layer2_bias);
+  printf("ret - %d\n", ret);
+  print_tensor(hidden_2);
+  printf("=====================\n");
+  Tensor *argmax_out = tensor_alloc(shapeN(2, 100, 1), DTYPE_UINT8);
+  int arg_ret = tensor_argmax(hidden_2, argmax_out);
+  printf("arg_ret - %d\n", arg_ret);
+  float acc;
+  print_shape(d.y);
+  print_shape(argmax_out);
+  reshape(argmax_out, shapeN(1, 100));
+  int acc_ret = accuracy(argmax_out, d.y, &acc);
+  printf("acc_ret - %d\n", acc_ret);
+  printf("%.3f\n", acc);
+  float loss = 0.0;
+  reshape(hidden_2, shapeN(2, 100, 10));
+  print_shape(hidden_2);
+  print_shape(d.y);
+  int ce_ret = cross_entropy(hidden_2, d.y, &loss);
+  printf("%.05f\n", loss);
+  printf("ce_ret - %d\n", ce_ret);
   // fflush(stdout);
   // printf("A rank=%zu dims=%zu,%zu,%zu\n", d.x->shape.rank,
   //      d.x->shape.dims[0], d.x->shape.dims[1], d.x->shape.dims[2]);
@@ -132,8 +164,10 @@ int main(void) {
   ret = bmm(out, l, r);
   print_tensor(out);
   ret = tensor_add(out, b);
+
   printf("tensor add ret %d\n", ret);
   print_tensor(out);
+
   tensor_free(&t1);
   tensor_free(&t2);
   dataset_free(&d);
