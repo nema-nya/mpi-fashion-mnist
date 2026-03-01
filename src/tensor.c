@@ -1,14 +1,16 @@
 #include "tensor.h"
+#include "utils.h"
 
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vcruntime.h>
 
 static size_t max_sz(size_t a, size_t b) { return a > b ? a : b; }
 
-static size_t numel(const Shape shape) {
+size_t shape_numel(const Shape shape) {
   size_t p = 1;
   for (size_t i = 0; i < shape.rank; ++i)
     p *= shape.dims[i];
@@ -17,14 +19,14 @@ static size_t numel(const Shape shape) {
 
 static int assert_tensors(const Tensor *a, const Tensor *b) {
   if (!a || !b)
-    return 0;
+    return 1;
   if (!a->data || !b->data)
-    return 0;
+    return 2;
   if (!tensor_same_shape(a, b))
-    return 0;
+    return 3;
   if (a->size != b->size)
-    return 0;
-  return 1;
+    return 4;
+  return 0;
 }
 
 size_t dtype_byte_count(const Dtype dtype) {
@@ -54,7 +56,7 @@ int tensor_init(Tensor *t, const Shape shape, const Dtype dtype) {
     if (shape.dims[i] == 0)
       return 3;
   t->shape = shape;
-  t->size = numel(shape);
+  t->size = shape_numel(shape);
   t->dtype = dtype;
   t->data = malloc(dtype_byte_count(dtype) * t->size);
 
@@ -179,8 +181,7 @@ int tensor_scale_uint8(Tensor *t, uint8_t a) {
 }
 
 int tensor_copy(Tensor *dst, const Tensor *src) {
-  if (!assert_tensors(dst, src))
-    return 1;
+  RETURN_IF_ERROR(assert_tensors(dst, src));
 
   memcpy(dst->data, src->data, tensor_byte_count(dst));
   return 0;
@@ -236,8 +237,8 @@ size_t tensor_index_array(const Shape shape, const size_t *indicies) {
 int reshape(Tensor *t, const Shape shape) {
   if (!t)
     return 1;
-  size_t t_shape_size = numel(t->shape);
-  size_t s_shape_size = numel(shape);
+  size_t t_shape_size = shape_numel(t->shape);
+  size_t s_shape_size = shape_numel(shape);
   if (t_shape_size != s_shape_size)
     return 2;
   t->shape = shape;
@@ -509,4 +510,13 @@ void print_tensor(const Tensor *t) {
     }
   }
   printf("\n\r");
+}
+
+int shape_is_compatible(const Shape from, const Shape to) {
+  Shape dest;
+  RETURN_IF_ERROR(shape_expand(from, to, &dest));
+  if (!shape_is_equal(dest, to)) {
+    return 1;
+  }
+  return 0;
 }

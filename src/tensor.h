@@ -21,6 +21,8 @@ typedef struct {
   Dtype dtype;
 } Tensor;
 
+size_t shape_numel(const Shape shape);
+
 Tensor *tensor_alloc(const Shape shape, const Dtype dtype);
 
 int tensor_init(Tensor *t, const Shape shape, const Dtype dtype);
@@ -93,5 +95,7 @@ Shape shapeN(size_t rank, ...);
 void print_shape(const Tensor *t);
 
 void print_tensor(const Tensor *t);
+
+int shape_is_compatible(const Shape from, const Shape to);
 
 #endif

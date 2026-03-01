@@ -1,10 +1,12 @@
 #include "linalg.h"
 #include "tensor.h"
+#include "utils.h"
 
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <utils.h>
 #include <vcruntime.h>
 
 int bmm(Tensor *C, const Tensor *A, const Tensor *B) {
@@ -286,5 +288,44 @@ int tensor_tanh_backward(const Tensor *a, Tensor *a_grad_) {
     a_grad_data[i] = 1 - a_data_y * a_data_y;
   }
 
+  return 0;
+}
+
+int tensor_bcast_grad(const Tensor *y_grad, Tensor *x_grad) {
+  RETURN_IF_ERROR(shape_is_compatible(x_grad->shape, y_grad->shape));
+
+  size_t indicies[MAX_RANK];
+  size_t new_dims = y_grad->shape.rank - x_grad->shape.rank;
+  RETURN_IF_ERROR(tensor_fill_float(x_grad, 0.0f));
+  float *y_grad_data = (float *)y_grad->data;
+  float *x_grad_data = (float *)x_grad->data;
+
+  for (size_t i = 0; i < y_grad->size; ++i) {
+    tensor_unindex(y_grad->shape, i, indicies);
+
+    for (size_t j = 0; j < x_grad->shape.rank; ++j) {
+      indicies[j] = indicies[j + new_dims];
+      if (y_grad->shape.dims[j + new_dims] > x_grad->shape.dims[j]) {
+        indicies[j] = 0;
+      }
+    }
+
+    size_t x_i = tensor_index_array(x_grad->shape, indicies);
+    x_grad_data[x_i] += y_grad_data[i];
+  }
+  return 0;
+}
+
+int tensor_add_backward(const Tensor *ab_grad, Tensor *a_grad, Tensor *b_grad) {
+  if (ab_grad == NULL) {
+    return 1;
+  }
+  if (a_grad != NULL) {
+    RETURN_IF_ERROR(tensor_bcast_grad(ab_grad, a_grad));
+  }
+
+  if (b_grad != NULL) {
+    RETURN_IF_ERROR(tensor_bcast_grad(ab_grad, b_grad));
+  }
   return 0;
 }

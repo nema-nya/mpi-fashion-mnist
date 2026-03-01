@@ -5,6 +5,10 @@
 #include <string.h>
 #include <time.h>
 
+void return_if_error_body(int code, char *msg) {
+  printf("%s = %d\n", msg, code);
+}
+
 void *read_all(const char *path, size_t *n) {
   FILE *file = NULL;
   void *buffer = NULL;

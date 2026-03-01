@@ -11,6 +11,22 @@
 #include "tensor.h"
 #include "utils.h"
 
+void test_bcast() {
+  Tensor *y = tensor_alloc(shapeN(3, 2, 2, 2), DTYPE_FLOAT32);
+  Tensor *x = tensor_alloc(shapeN(2, 1, 2), DTYPE_FLOAT32);
+  float y_values[] = {1, 2, 3, 4, 5, 6, 7, 8};
+  float x_values[] = {1, 2};
+  memcpy(y->data, y_values, tensor_byte_count(y));
+  memcpy(x->data, x_values, tensor_byte_count(x));
+
+  int ret = tensor_bcast_grad(y, x);
+
+  assert(ret == 0);
+  float *x_data = (float *)x->data;
+  assert(fabs(x_data[0] - 16.0) < 1e-5);
+  assert(fabs(x_data[1] - 20.0) < 1e-5);
+}
+
 bool verify_endianness() {
   uint16_t dummy = 0x0100;
   uint8_t *dummy_ptr = (uint8_t *)(&dummy);
@@ -18,6 +34,8 @@ bool verify_endianness() {
 }
 
 int main(void) {
+
+  test_bcast();
   assert(("Your system is big-endian", verify_endianness()));
   Dataset d;
   if (dataset_load_bin("data/train-labels.bin", "data/train-data.bin", &d)) {
@@ -136,11 +154,19 @@ int main(void) {
   int ce_ret = cross_entropy(hidden_2, d.y, &loss);
   printf("%.05f\n", loss);
   printf("ce_ret - %d\n", ce_ret);
-  Tensor *hidden_2_grad = tensor_alloc(hidden_2->shape, DTYPE_FLOAT32); 
+  Tensor *hidden_2_grad = tensor_alloc(hidden_2->shape, DTYPE_FLOAT32);
   int ceb_ret = cross_entropy_backward(hidden_2, d.y, hidden_2_grad);
   printf("ceb_ret - %d\n", ceb_ret);
-  tensor_scale_float(hidden_2_grad, 10000.0);
+  // tensor_scale_float(hidden_2_grad, 1);
   print_tensor(hidden_2_grad);
+
+  Tensor *layer2_bias_grad = tensor_alloc(layer2_bias->shape, DTYPE_FLOAT32);
+  print_shape(hidden_2_grad);
+  print_shape(layer2_bias_grad);
+  int tab_ret = tensor_add_backward(hidden_2_grad, NULL, layer2_bias_grad);
+  printf("tab_ret - %d\n", tab_ret);
+  print_tensor(layer2_bias_grad);
+  
   // fflush(stdout);
   // printf("A rank=%zu dims=%zu,%zu,%zu\n", d.x->shape.rank,
   //      d.x->shape.dims[0], d.x->shape.dims[1], d.x->shape.dims[2]);
@@ -176,5 +202,6 @@ int main(void) {
   tensor_free(&t1);
   tensor_free(&t2);
   dataset_free(&d);
+
   return 0;
 }
