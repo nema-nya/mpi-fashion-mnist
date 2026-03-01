@@ -28,6 +28,7 @@ int tensor_init(Tensor *t, const Shape shape, const Dtype dtype);
 void tensor_free(Tensor *t);
 
 size_t tensor_size(const Tensor *t);
+
 size_t tensor_dim(const Tensor *t, size_t i);
 
 int tensor_same_shape(const Tensor *a, const Tensor *b);

@@ -17,4 +17,8 @@ int accuracy(const Tensor *a, const Tensor *b, float *acc);
 
 int cross_entropy(const Tensor *y_, const Tensor *y, float *loss);
 
+int cross_entropy_backward(const Tensor *y_, const Tensor *y, Tensor *y_grad_);
+
+int tensor_tanh_backward(const Tensor *a, Tensor *a_grad);
+
 #endif

@@ -8,7 +8,7 @@
 #include <vcruntime.h>
 
 int bmm(Tensor *C, const Tensor *A, const Tensor *B) {
-  if (!C || !A || !B)
+  if (C == NULL || A == NULL || B == NULL)
     return 1;
   if (C->shape.rank != 3 || A->shape.rank != 3 || B->shape.rank != 3)
     return 2;
@@ -44,7 +44,7 @@ int bmm(Tensor *C, const Tensor *A, const Tensor *B) {
 }
 
 int tensor_add(Tensor *a, const Tensor *b) {
-  if (!a || !b) {
+  if (a == NULL || b == NULL) {
     return 1;
   }
 
@@ -112,7 +112,7 @@ int tensor_tanh(Tensor *a) {
 }
 
 int tensor_argmax(const Tensor *a, Tensor *out) {
-  if (!a || !out) {
+  if (a == NULL || out == NULL) {
     return 1;
   }
 
@@ -155,7 +155,7 @@ int tensor_argmax(const Tensor *a, Tensor *out) {
 }
 
 int accuracy(const Tensor *a, const Tensor *b, float *acc) {
-  if (!a || !b) {
+  if (a == NULL || b == NULL) {
     return 1;
   }
 
@@ -182,7 +182,7 @@ int accuracy(const Tensor *a, const Tensor *b, float *acc) {
 }
 
 int cross_entropy(const Tensor *y_, const Tensor *y, float *loss) {
-  if (!y_ || !y) {
+  if (y_ == NULL || y == NULL) {
     return 1;
   }
 
@@ -218,6 +218,73 @@ int cross_entropy(const Tensor *y_, const Tensor *y, float *loss) {
   }
 
   *loss /= y->size;
+
+  return 0;
+}
+
+// op in c_e a,b,c and we add them (a+b+c) / 3 to get the avg and the output y
+// (y=(a+b+c) / 3) what is dy/da? b = 0, c = 0, a = 1 / 3 dy/da = 1/3
+int cross_entropy_backward(const Tensor *y_, const Tensor *y, Tensor *y_grad_) {
+  if (y == NULL) {
+    return 1;
+  }
+
+  if (!y->data || y->dtype != DTYPE_UINT8) {
+    return 2;
+  }
+
+  Shape s;
+  s.rank = y_->shape.rank - 1;
+  for (size_t i = 0; i < s.rank; ++i) {
+    s.dims[i] = y_->shape.dims[i];
+  }
+
+  if (!shape_is_equal(s, y->shape)) {
+    return 3;
+  }
+
+  tensor_fill_float(y_grad_, 1.0);
+  tensor_scale_float(y_grad_, 1.0 / y->size);
+  float *y_data_ = (float *)y_->data;
+  uint8_t *y_data = (uint8_t *)y->data;
+  float *y_grad_data_ = (float *)y_grad_->data;
+  size_t indicies[MAX_RANK];
+  for (size_t i = 0; i < y->size; ++i) {
+    tensor_unindex(y->shape, i, indicies);
+    indicies[s.rank] = 0;
+    size_t new_i = tensor_index_array(y_->shape, indicies);
+    float denom = 0.0;
+    for (size_t j = 0; j < y_->shape.dims[s.rank]; ++j) {
+      size_t y_i_ = new_i + j;
+      denom += exp(y_data_[y_i_]);
+    }
+    for (size_t j = 0; j < y_grad_->shape.dims[s.rank]; ++j) {
+      size_t y_i_ = new_i + j;
+      if (j == y_data[i]) {
+        y_grad_data_[y_i_] *= (-denom + exp(y_data_[y_i_])) / denom;
+      } else {
+        y_grad_data_[y_i_] *= exp(y_data_[y_i_]) / denom;
+      }
+    }
+  }
+
+  return 0;
+}
+
+int tensor_tanh_backward(const Tensor *a, Tensor *a_grad_) {
+  if (a == NULL || a_grad_ == NULL) {
+    return 1;
+  }
+  if (a->dtype != DTYPE_FLOAT32 || a_grad_ != DTYPE_FLOAT32) {
+    return 2;
+  }
+
+  float *a_data = (float *)a->data;
+  float *a_grad_data = (float *)a_grad_;
+  for (size_t i = 0; i < a->size; ++i) {
+    float a_data_y = tanh(a_data[i]);
+    a_grad_data[i] = 1 - a_data_y * a_data_y;
+  }
 
   return 0;
 }

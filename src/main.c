@@ -136,6 +136,11 @@ int main(void) {
   int ce_ret = cross_entropy(hidden_2, d.y, &loss);
   printf("%.05f\n", loss);
   printf("ce_ret - %d\n", ce_ret);
+  Tensor *hidden_2_grad = tensor_alloc(hidden_2->shape, DTYPE_FLOAT32); 
+  int ceb_ret = cross_entropy_backward(hidden_2, d.y, hidden_2_grad);
+  printf("ceb_ret - %d\n", ceb_ret);
+  tensor_scale_float(hidden_2_grad, 10000.0);
+  print_tensor(hidden_2_grad);
   // fflush(stdout);
   // printf("A rank=%zu dims=%zu,%zu,%zu\n", d.x->shape.rank,
   //      d.x->shape.dims[0], d.x->shape.dims[1], d.x->shape.dims[2]);
