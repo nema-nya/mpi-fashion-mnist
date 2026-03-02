@@ -11,15 +11,19 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_include_directories(${PROJECT_NAME} PRIVATE src)
+target_include_directories(${PROJECT_NAME} PUBLIC src)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE m)
+find_library(MATH_LIBRARY m)
+if(MATH_LIBRARY)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${MATH_LIBRARY})
+endif()
+
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose build type" FORCE)
 endif()
 
-target_compile_options(${PROJECT_NAME} PRIVATE 
+target_compile_options(${PROJECT_NAME} PUBLIC 
     $<$<CONFIG:Debug>:-O0 -g3>
     $<$<CONFIG:Release>:-O2>
 )
