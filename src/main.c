@@ -44,20 +44,14 @@ int main(void) {
   }
   Tensor *new_x = tensor_alloc(shapeN(3, 100, 1, 784), DTYPE_FLOAT32);
   Tensor *new_y = tensor_alloc(shapeN(1, 100), DTYPE_UINT8);
-  // print_tensor(d.x);
 
   reshape(d.x, shapeN(3, 60000, 1, 784));
-  // print_shape(d.x);
   int ts_ret1 = tensor_slice(d.x, new_x, 0, 0, 100);
   int ts_ret2 = tensor_slice(d.y, new_y, 0, 0, 100);
-  // print_tensor(new_x);
-  // printf("ts1 %d ts2 %d\n", ts_ret1, ts_ret2);
   free(d.x);
   free(d.y);
   d.x = new_x;
   d.y = new_y;
-  // print_tensor(d.x);
-  // printf("loaded %zu samples\n", d.n);
 
   Tensor t1 = {0};
   Tensor t2 = {0};
@@ -78,13 +72,6 @@ int main(void) {
     return 1;
   }
 
-  // tensor_arange_float(&t2);
-  // print_tensor(&t2);
-  // printf("\n\r");
-  // int val = tensor_expand(&t2, &t1);
-  // printf("%d\n\r", val);
-  // print_tensor(&t1);
-
   float *layer1_weight_data = (float *)read_all("data/layer1-weight.bin", NULL);
   float *layer1_bias_data = (float *)read_all("data/layer1-bias.bin", NULL);
   float *layer2_weight_data = (float *)read_all("data/layer2-weight.bin", NULL);
@@ -104,100 +91,54 @@ int main(void) {
   layer1_bias->data = (void *)layer1_bias_data;
   layer2_weight->data = (void *)layer2_weight_data;
   layer2_bias->data = (void *)layer2_bias_data;
-  // printf("%.2f", layer1_weight_data[0]);
   int rs_ret1 = reshape(layer1_weight, shapeN(3, 1, 784, 256));
-  // printf("rs_ret1 - %d\r\n", rs_ret1);
-  print_tensor(layer1_weight);
-  print_tensor(layer1_bias);
-  print_tensor(layer2_weight);
-  print_tensor(layer2_bias);
   int rs_ret2 = reshape(d.x, shapeN(3, 100, 1, 784));
-  // printf("rs_ret2 - %d\r\n", rs_ret2);
-  // 1 forward pass
   Tensor *hidden_1 = tensor_alloc(shapeN(3, 100, 1, 256), DTYPE_FLOAT32);
-  // print_tensor(hidden_1);
-  // print_tensor(d.x);
-  int ret = bmm(hidden_1, d.x, layer1_weight);
+  int ret = bmm(hidden_1, d.x, layer1_weight, false, false);
   ret = tensor_add(hidden_1, layer1_bias);
-  printf("ret - %d\n", ret);
-
-  print_tensor(hidden_1);
-
+  Tensor *hidden_1_pre_tanh = tensor_alloc(hidden_1->shape, DTYPE_FLOAT32);
+  RETURN_IF_ERROR(tensor_copy(hidden_1_pre_tanh, hidden_1));
   tensor_tanh(hidden_1);
-  print_tensor(hidden_1);
-  printf("=====================\n");
   Tensor *hidden_2 = tensor_alloc(shapeN(3, 100, 1, 10), DTYPE_FLOAT32);
   reshape(layer2_weight, shapeN(3, 1, 256, 10));
-  // print_tensor(hidden_1);
-  // print_tensor(d.x);
-  ret = bmm(hidden_2, hidden_1, layer2_weight);
-  printf("ret - %d\n", ret);
-  print_tensor(hidden_2);
+  ret = bmm(hidden_2, hidden_1, layer2_weight, false, false);
   ret = tensor_add(hidden_2, layer2_bias);
-  printf("ret - %d\n", ret);
-  print_tensor(hidden_2);
-  printf("=====================\n");
   Tensor *argmax_out = tensor_alloc(shapeN(2, 100, 1), DTYPE_UINT8);
   int arg_ret = tensor_argmax(hidden_2, argmax_out);
-  printf("arg_ret - %d\n", arg_ret);
   float acc;
-  print_shape(d.y);
-  print_shape(argmax_out);
   reshape(argmax_out, shapeN(1, 100));
   int acc_ret = accuracy(argmax_out, d.y, &acc);
-  printf("acc_ret - %d\n", acc_ret);
-  printf("%.3f\n", acc);
   float loss = 0.0;
   reshape(hidden_2, shapeN(2, 100, 10));
-  print_shape(hidden_2);
-  print_shape(d.y);
   int ce_ret = cross_entropy(hidden_2, d.y, &loss);
-  printf("%.05f\n", loss);
-  printf("ce_ret - %d\n", ce_ret);
   Tensor *hidden_2_grad = tensor_alloc(hidden_2->shape, DTYPE_FLOAT32);
   int ceb_ret = cross_entropy_backward(hidden_2, d.y, hidden_2_grad);
-  printf("ceb_ret - %d\n", ceb_ret);
-  // tensor_scale_float(hidden_2_grad, 1);
-  print_tensor(hidden_2_grad);
 
   Tensor *layer2_bias_grad = tensor_alloc(layer2_bias->shape, DTYPE_FLOAT32);
-  print_shape(hidden_2_grad);
-  print_shape(layer2_bias_grad);
   int tab_ret = tensor_add_backward(hidden_2_grad, NULL, layer2_bias_grad);
-  printf("tab_ret - %d\n", tab_ret);
-  print_tensor(layer2_bias_grad);
+  Tensor *layer2_weight_grad =
+      tensor_alloc(shapeN(3, 100, 256, 10), DTYPE_FLOAT32);
+  reshape(hidden_2_grad, shapeN(3, 100, 1, 10));
+  Tensor *hidden_1_grad = tensor_alloc(shapeN(3, 100, 1, 256), DTYPE_FLOAT32);
+  RETURN_IF_ERROR(bmm_backward(hidden_1, layer2_weight, hidden_2_grad,
+                               hidden_1_grad, layer2_weight_grad));
+
+  RETURN_IF_ERROR(tensor_tanh_backward(hidden_1_pre_tanh, hidden_1_grad));
+
+  Tensor *layer1_bias_grad = tensor_alloc(layer1_bias->shape, DTYPE_FLOAT32);
+  RETURN_IF_ERROR(tensor_add_backward(hidden_1_grad, NULL, layer1_bias_grad));
+
+  Tensor *layer1_weight_grad =
+      tensor_alloc(layer1_weight->shape, DTYPE_FLOAT32);
+  RETURN_IF_ERROR(bmm_backward(d.x, layer1_weight, hidden_1_grad, NULL,
+                               layer1_weight_grad));
   
-  // fflush(stdout);
-  // printf("A rank=%zu dims=%zu,%zu,%zu\n", d.x->shape.rank,
-  //      d.x->shape.dims[0], d.x->shape.dims[1], d.x->shape.dims[2]);
-  // printf("B rank=%zu dims=%zu,%zu,%zu\n", layer1_weight->shape.rank,
-  //        layer1_weight->shape.dims[0], layer1_weight->shape.dims[1],
-  //        layer1_weight->shape.dims[2]);
-  // printf("C rank=%zu dims=%zu,%zu,%zu\n", hidden_1->shape.rank,
-  //        hidden_1->shape.dims[0], hidden_1->shape.dims[1],
-  //        hidden_1->shape.dims[2]);
-
-  // print_tensor(hidden_1);
-
-  Tensor *l = tensor_alloc(shapeN(3, 2, 2, 2), DTYPE_FLOAT32);
-  Tensor *r = tensor_alloc(shapeN(3, 1, 2, 1), DTYPE_FLOAT32);
-  Tensor *b = tensor_alloc(shapeN(3, 2, 2, 1), DTYPE_FLOAT32);
-  // tensor_arange_float(l);
-  // tensor_arange_float(r);
-  float l_values[] = {1, 2, 3, 4, 5, 6, 7, 8};
-  float r_values[] = {1, 2};
-  float b_values[] = {1, 2, 3, 4};
-  memcpy(l->data, l_values, tensor_byte_count(l));
-  memcpy(r->data, r_values, tensor_byte_count(r));
-  memcpy(b->data, b_values, tensor_byte_count(b));
-  Tensor *out = tensor_alloc(shapeN(3, 2, 2, 1), DTYPE_FLOAT32);
-  tensor_fill_float(out, 0.0);
-  ret = bmm(out, l, r);
-  print_tensor(out);
-  ret = tensor_add(out, b);
-
-  printf("tensor add ret %d\n", ret);
-  print_tensor(out);
+  tensor_scale_float(layer1_weight_grad, 10000000.0f);
+  print_tensor(layer1_weight_grad);
+  print_tensor(layer1_bias_grad);
+  tensor_scale_float(layer2_weight_grad, 10000.0f);
+  print_tensor(layer2_weight_grad);
+  print_tensor(layer2_bias_grad);
 
   tensor_free(&t1);
   tensor_free(&t2);

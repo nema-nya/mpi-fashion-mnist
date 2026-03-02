@@ -9,12 +9,21 @@
 #include <utils.h>
 #include <vcruntime.h>
 
-int bmm(Tensor *C, const Tensor *A, const Tensor *B) {
+int bmm(Tensor *C, const Tensor *A, const Tensor *B, bool transpose_A,
+        bool transpose_B) {
   if (C == NULL || A == NULL || B == NULL)
     return 1;
   if (C->shape.rank != 3 || A->shape.rank != 3 || B->shape.rank != 3)
     return 2;
-  if (A->shape.dims[2] != B->shape.dims[1])
+  size_t a_axis = 2;
+  if (transpose_A) {
+    a_axis = 1;
+  }
+  size_t b_axis = 1;
+  if (transpose_B) {
+    b_axis = 2;
+  }
+  if (A->shape.dims[a_axis] != B->shape.dims[b_axis])
     return 3;
   if (A->dtype != DTYPE_FLOAT32 || B->dtype != DTYPE_FLOAT32 ||
       C->dtype != DTYPE_FLOAT32)
@@ -27,16 +36,26 @@ int bmm(Tensor *C, const Tensor *A, const Tensor *B) {
       for (size_t k = 0; k < C->shape.dims[2]; ++k) {
         size_t c_index = tensor_index(C->shape, i, j, k);
         float sum = 0.0f;
-        for (size_t l = 0; l < A->shape.dims[2]; ++l) {
-          size_t a_index =
-              tensor_index(A->shape, i % A->shape.dims[0], j % A->shape.dims[1],
-                           l % A->shape.dims[2]);
-          size_t b_index =
-              tensor_index(B->shape, i % B->shape.dims[0], l % B->shape.dims[1],
-                           k % B->shape.dims[2]);
+        for (size_t l = 0; l < A->shape.dims[a_axis]; ++l) {
+          size_t a_index;
+          size_t b_index;
+
+          if (transpose_A) {
+            a_index = tensor_index(A->shape, i % A->shape.dims[0],
+                                   l % A->shape.dims[2], j % A->shape.dims[1]);
+          } else {
+            a_index = tensor_index(A->shape, i % A->shape.dims[0],
+                                   j % A->shape.dims[1], l % A->shape.dims[2]);
+          }
+
+          if (transpose_B) {
+            b_index = tensor_index(B->shape, i % B->shape.dims[0],
+                                   k % B->shape.dims[2], l % B->shape.dims[1]);
+          } else {
+            b_index = tensor_index(B->shape, i % B->shape.dims[0],
+                                   l % B->shape.dims[1], k % B->shape.dims[2]);
+          }
           sum += a_data[a_index] * b_data[b_index];
-          // printf("a_index %zu b_index %zu c_index %zu\n", a_index, b_index,
-          // c_index);
         }
         c_data[c_index] = sum;
       }
@@ -273,19 +292,23 @@ int cross_entropy_backward(const Tensor *y_, const Tensor *y, Tensor *y_grad_) {
   return 0;
 }
 
-int tensor_tanh_backward(const Tensor *a, Tensor *a_grad_) {
-  if (a == NULL || a_grad_ == NULL) {
+int tensor_tanh_backward(const Tensor *a, Tensor *a_grad) {
+  if (a == NULL || a_grad == NULL) {
     return 1;
   }
-  if (a->dtype != DTYPE_FLOAT32 || a_grad_ != DTYPE_FLOAT32) {
+
+  if (a->dtype != DTYPE_FLOAT32 || a_grad->dtype != DTYPE_FLOAT32) {
     return 2;
+  }
+  if (!shape_is_equal(a->shape, a_grad->shape)) {
+    return 3;
   }
 
   float *a_data = (float *)a->data;
-  float *a_grad_data = (float *)a_grad_;
+  float *a_grad_data = (float *)a_grad->data;
   for (size_t i = 0; i < a->size; ++i) {
     float a_data_y = tanh(a_data[i]);
-    a_grad_data[i] = 1 - a_data_y * a_data_y;
+    a_grad_data[i] = (1 - a_data_y * a_data_y) * a_grad_data[i];
   }
 
   return 0;
@@ -326,6 +349,30 @@ int tensor_add_backward(const Tensor *ab_grad, Tensor *a_grad, Tensor *b_grad) {
 
   if (b_grad != NULL) {
     RETURN_IF_ERROR(tensor_bcast_grad(ab_grad, b_grad));
+  }
+  return 0;
+}
+
+// C[i,j,k] = A[i,j,l] * B[i,l,k]
+// dL / dC[i,j,k]
+// dL / dA[i,j,l]
+// dL / dB[i,l,k]
+// dL / dA[i,j,l] = dL/dC[i,j,k] * dC[i,j,k] / dA[i,j,l] = dL/dC[i,j,k] *
+// d(A[i,j,l] * B[i,l,k]) / dA[i,j,l] =
+//     dL/dC[i,j,k] * (A[i,j,l] * dB[i,l,k]/dA[i,j,l] + dA[i,j,l]/dA[i,j,l] *
+//     B[i,l,k]) = dL/dC[i,j,k] * B[i,l,k]
+// dL / dA[i,j,l] = dL/dC[i,j,k] * B[i,l,k]
+// dL / dA[i,j,l] = dL/dC[i,j,k] * B.T[i,k,l]
+
+// dL / dB[i,l,k]  = A.T[i,l,j] * dL / dC[i,j,k]
+int bmm_backward(const Tensor *A, const Tensor *B, const Tensor *C_grad,
+                 Tensor *A_grad, Tensor *B_grad) {
+  if (A_grad != NULL) {
+    RETURN_IF_ERROR(bmm(A_grad, C_grad, B, false, true));
+  };
+
+  if (B_grad != NULL) {
+    RETURN_IF_ERROR(bmm(B_grad, A, C_grad, true, false));
   }
   return 0;
 }

@@ -4,7 +4,7 @@
 #include "tensor.h"
 #include <stddef.h>
 
-int bmm(Tensor *C, const Tensor *A, const Tensor *B);
+int bmm(Tensor *C, const Tensor *A, const Tensor *B, bool transpose_A, bool transpose_B);
 
 int tensor_add(Tensor *a, const Tensor *b);
 
@@ -23,5 +23,7 @@ int tensor_tanh_backward(const Tensor *a, Tensor *a_grad);
 int tensor_bcast_grad(const Tensor *y_grad, Tensor *x_grad);
 
 int tensor_add_backward(const Tensor *ab_grad, Tensor *a_grad, Tensor *b_grad);
+
+int bmm_backward(const Tensor *A, const Tensor *B, const Tensor *C_grad, Tensor* A_grad, Tensor* B_grad);
 
 #endif
