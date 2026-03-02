@@ -98,4 +98,8 @@ void print_tensor(const Tensor *t);
 
 int shape_is_compatible(const Shape from, const Shape to);
 
+int tensor_scale_and_add(Tensor *y, float a, const Tensor *x);
+
+int tensor_square_scale_and_add(Tensor *y, float a, const Tensor *x);
+
 #endif

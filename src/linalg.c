@@ -72,25 +72,18 @@ int tensor_add(Tensor *a, const Tensor *b) {
   if (a->dtype != b->dtype) {
     return 2;
   }
+  RETURN_IF_ERROR(shape_is_compatible(b->shape, a->shape));
 
-  Shape shape_dest;
-  if (shape_expand(a->shape, b->shape, &shape_dest)) {
-    return 3;
-  }
-
-  if (!shape_is_equal(a->shape, shape_dest)) {
-    return 4;
-  }
   size_t b_indicies[MAX_RANK];
-  size_t new_dims = shape_dest.rank - b->shape.rank;
+  size_t new_dims = a->shape.rank - b->shape.rank;
   for (size_t i = 0; i < a->size; ++i) {
-    tensor_unindex(shape_dest, i, b_indicies);
+    tensor_unindex(a->shape, i, b_indicies);
 
-    for (size_t j = 0; j < shape_dest.rank; ++j) {
+    for (size_t j = 0; j < a->shape.rank; ++j) {
       if (j < new_dims) {
         b_indicies[j] = 0;
       } else {
-        if (shape_dest.dims[j] > b->shape.dims[j - new_dims]) {
+        if (a->shape.dims[j] > b->shape.dims[j - new_dims]) {
           b_indicies[j] = 0;
         }
       }
@@ -210,7 +203,6 @@ int cross_entropy(const Tensor *y_, const Tensor *y, float *loss) {
   if (y_->dtype != DTYPE_FLOAT32 || y->dtype != DTYPE_UINT8) {
     return 2;
   }
-
   Shape s;
   s.rank = y_->shape.rank - 1;
   for (size_t i = 0; i < s.rank; ++i) {
@@ -250,8 +242,12 @@ int cross_entropy_backward(const Tensor *y_, const Tensor *y, Tensor *y_grad_) {
     return 1;
   }
 
-  if (!y->data || y->dtype != DTYPE_UINT8) {
+  if (y->dtype != DTYPE_UINT8) {
     return 2;
+  }
+
+  if (y_->dtype != DTYPE_FLOAT32) {
+    return 3;
   }
 
   Shape s;
@@ -261,11 +257,11 @@ int cross_entropy_backward(const Tensor *y_, const Tensor *y, Tensor *y_grad_) {
   }
 
   if (!shape_is_equal(s, y->shape)) {
-    return 3;
+    return 4;
   }
 
-  tensor_fill_float(y_grad_, 1.0);
-  tensor_scale_float(y_grad_, 1.0 / y->size);
+  RETURN_IF_ERROR(tensor_fill_float(y_grad_, 1.0));
+  RETURN_IF_ERROR(tensor_scale_float(y_grad_, 1.0 / y->size));
   float *y_data_ = (float *)y_->data;
   uint8_t *y_data = (uint8_t *)y->data;
   float *y_grad_data_ = (float *)y_grad_->data;
@@ -369,10 +365,25 @@ int bmm_backward(const Tensor *A, const Tensor *B, const Tensor *C_grad,
                  Tensor *A_grad, Tensor *B_grad) {
   if (A_grad != NULL) {
     RETURN_IF_ERROR(bmm(A_grad, C_grad, B, false, true));
-  };
+  }
 
   if (B_grad != NULL) {
     RETURN_IF_ERROR(bmm(B_grad, A, C_grad, true, false));
   }
+  return 0;
+}
+
+int tensor_sqrtf(Tensor *a) {
+  if (a == NULL) {
+    return 1;
+  }
+  if (a->dtype != DTYPE_FLOAT32) {
+    return 2;
+  }
+  float *a_data = (float *)a->data;
+  for (size_t i = 0; i < a->size; ++i) {
+    a_data[i] = sqrtf(a_data[i]);
+  }
+
   return 0;
 }

@@ -11,6 +11,8 @@
 #include "tensor.h"
 #include "utils.h"
 
+#include "optim.h"
+
 void test_bcast() {
   Tensor *y = tensor_alloc(shapeN(3, 2, 2, 2), DTYPE_FLOAT32);
   Tensor *x = tensor_alloc(shapeN(2, 1, 2), DTYPE_FLOAT32);
@@ -91,52 +93,63 @@ int main(void) {
   layer1_bias->data = (void *)layer1_bias_data;
   layer2_weight->data = (void *)layer2_weight_data;
   layer2_bias->data = (void *)layer2_bias_data;
-  int rs_ret1 = reshape(layer1_weight, shapeN(3, 1, 784, 256));
-  int rs_ret2 = reshape(d.x, shapeN(3, 100, 1, 784));
-  Tensor *hidden_1 = tensor_alloc(shapeN(3, 100, 1, 256), DTYPE_FLOAT32);
-  int ret = bmm(hidden_1, d.x, layer1_weight, false, false);
-  ret = tensor_add(hidden_1, layer1_bias);
-  Tensor *hidden_1_pre_tanh = tensor_alloc(hidden_1->shape, DTYPE_FLOAT32);
-  RETURN_IF_ERROR(tensor_copy(hidden_1_pre_tanh, hidden_1));
-  tensor_tanh(hidden_1);
-  Tensor *hidden_2 = tensor_alloc(shapeN(3, 100, 1, 10), DTYPE_FLOAT32);
-  reshape(layer2_weight, shapeN(3, 1, 256, 10));
-  ret = bmm(hidden_2, hidden_1, layer2_weight, false, false);
-  ret = tensor_add(hidden_2, layer2_bias);
-  Tensor *argmax_out = tensor_alloc(shapeN(2, 100, 1), DTYPE_UINT8);
-  int arg_ret = tensor_argmax(hidden_2, argmax_out);
-  float acc;
-  reshape(argmax_out, shapeN(1, 100));
-  int acc_ret = accuracy(argmax_out, d.y, &acc);
-  float loss = 0.0;
-  reshape(hidden_2, shapeN(2, 100, 10));
-  int ce_ret = cross_entropy(hidden_2, d.y, &loss);
-  Tensor *hidden_2_grad = tensor_alloc(hidden_2->shape, DTYPE_FLOAT32);
-  int ceb_ret = cross_entropy_backward(hidden_2, d.y, hidden_2_grad);
 
-  Tensor *layer2_bias_grad = tensor_alloc(layer2_bias->shape, DTYPE_FLOAT32);
-  int tab_ret = tensor_add_backward(hidden_2_grad, NULL, layer2_bias_grad);
-  Tensor *layer2_weight_grad =
-      tensor_alloc(shapeN(3, 100, 256, 10), DTYPE_FLOAT32);
-  reshape(hidden_2_grad, shapeN(3, 100, 1, 10));
+  RETURN_IF_ERROR(reshape(layer1_weight, shapeN(3, 1, 784, 256)));
+  RETURN_IF_ERROR(reshape(d.x, shapeN(3, 100, 1, 784)));
+  RETURN_IF_ERROR(reshape(layer2_weight, shapeN(3, 1, 256, 10)));
+
+  // forward
+
+  Tensor *hidden_1 = tensor_alloc(shapeN(3, 100, 1, 256), DTYPE_FLOAT32);
   Tensor *hidden_1_grad = tensor_alloc(shapeN(3, 100, 1, 256), DTYPE_FLOAT32);
+  Tensor *hidden_1_pre_tanh = tensor_alloc(hidden_1->shape, DTYPE_FLOAT32);
+  Tensor *layer1_bias_grad = tensor_alloc(layer1_bias->shape, DTYPE_FLOAT32);
+  Tensor *layer1_weight_grad =
+      tensor_alloc(layer1_weight->shape, DTYPE_FLOAT32);
+
+  Tensor *argmax_out = tensor_alloc(shapeN(2, 100, 1), DTYPE_UINT8);
+
+  Tensor *hidden_2 = tensor_alloc(shapeN(3, 100, 1, 10), DTYPE_FLOAT32);
+  Tensor *hidden_2_grad = tensor_alloc(hidden_2->shape, DTYPE_FLOAT32);
+  Tensor *layer2_bias_grad = tensor_alloc(layer2_bias->shape, DTYPE_FLOAT32);
+  Tensor *layer2_weight_grad =
+      tensor_alloc(layer2_weight->shape, DTYPE_FLOAT32);
+  float acc = 0.0;
+  float loss = 0.0;
+
+  RETURN_IF_ERROR(bmm(hidden_1, d.x, layer1_weight, false, false));
+  RETURN_IF_ERROR(tensor_add(hidden_1, layer1_bias));
+
+  RETURN_IF_ERROR(tensor_copy(hidden_1_pre_tanh, hidden_1));
+
+  RETURN_IF_ERROR(tensor_tanh(hidden_1));
+
+  RETURN_IF_ERROR(bmm(hidden_2, hidden_1, layer2_weight, false, false));
+  RETURN_IF_ERROR(tensor_add(hidden_2, layer2_bias));
+
+  RETURN_IF_ERROR(tensor_argmax(hidden_2, argmax_out));
+  RETURN_IF_ERROR(reshape(argmax_out, shapeN(1, 100)));
+  RETURN_IF_ERROR(accuracy(argmax_out, d.y, &acc));
+
+  RETURN_IF_ERROR(reshape(hidden_2, shapeN(2, 100, 10)));
+  RETURN_IF_ERROR(cross_entropy(hidden_2, d.y, &loss));
+  printf("%.5f\n", loss);
+  ////////////////////////////////////////////////////////////////////////////////////////////
+  RETURN_IF_ERROR(cross_entropy_backward(hidden_2, d.y, hidden_2_grad));
+  RETURN_IF_ERROR(reshape(hidden_2, shapeN(3, 100, 1, 10)));
+
+  RETURN_IF_ERROR(tensor_add_backward(hidden_2_grad, NULL, layer2_bias_grad));
   RETURN_IF_ERROR(bmm_backward(hidden_1, layer2_weight, hidden_2_grad,
                                hidden_1_grad, layer2_weight_grad));
 
   RETURN_IF_ERROR(tensor_tanh_backward(hidden_1_pre_tanh, hidden_1_grad));
 
-  Tensor *layer1_bias_grad = tensor_alloc(layer1_bias->shape, DTYPE_FLOAT32);
   RETURN_IF_ERROR(tensor_add_backward(hidden_1_grad, NULL, layer1_bias_grad));
-
-  Tensor *layer1_weight_grad =
-      tensor_alloc(layer1_weight->shape, DTYPE_FLOAT32);
   RETURN_IF_ERROR(bmm_backward(d.x, layer1_weight, hidden_1_grad, NULL,
                                layer1_weight_grad));
-  
-  tensor_scale_float(layer1_weight_grad, 10000000.0f);
+
   print_tensor(layer1_weight_grad);
   print_tensor(layer1_bias_grad);
-  tensor_scale_float(layer2_weight_grad, 10000.0f);
   print_tensor(layer2_weight_grad);
   print_tensor(layer2_bias_grad);
 

@@ -520,3 +520,30 @@ int shape_is_compatible(const Shape from, const Shape to) {
   }
   return 0;
 }
+
+int tensor_scale_and_add(Tensor *y, float a, const Tensor *x) {
+  if (!assert_tensors(y, x))
+    return 1;
+
+  if (y->dtype != DTYPE_FLOAT32 || x->dtype != DTYPE_FLOAT32) {
+    return 2;
+  }
+  float *y_data = (float *)y->data;
+  float *x_data = (float *)x->data;
+  for (size_t i = 0; i < y->size; ++i)
+    y_data[i] += a * x_data[i];
+  return 0;
+}
+int tensor_square_scale_and_add(Tensor *y, float a, const Tensor *x) {
+  if (!assert_tensors(y, x))
+    return 1;
+
+  if (y->dtype != DTYPE_FLOAT32 || x->dtype != DTYPE_FLOAT32) {
+    return 2;
+  }
+  float *y_data = (float *)y->data;
+  float *x_data = (float *)x->data;
+  for (size_t i = 0; i < y->size; ++i)
+    y_data[i] += a * (x_data[i] * x_data[i]);
+  return 0;
+}

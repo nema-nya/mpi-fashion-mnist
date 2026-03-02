@@ -26,4 +26,6 @@ int tensor_add_backward(const Tensor *ab_grad, Tensor *a_grad, Tensor *b_grad);
 
 int bmm_backward(const Tensor *A, const Tensor *B, const Tensor *C_grad, Tensor* A_grad, Tensor* B_grad);
 
+int tensor_sqrtf(Tensor *a);
+
 #endif
