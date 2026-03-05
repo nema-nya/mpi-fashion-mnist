@@ -72,31 +72,31 @@ int main(void) {
         return 1;
     }
 
-    float* layer1_weight_data =
-        (float*)read_all("data/layer1-weight.bin", NULL);
-    float* layer1_bias_data = (float*)read_all("data/layer1-bias.bin", NULL);
-    float* layer2_weight_data =
-        (float*)read_all("data/layer2-weight.bin", NULL);
-    float* layer2_bias_data = (float*)read_all("data/layer2-bias.bin", NULL);
-
     Tensor* layer1_weight = tensor_alloc(shapeN(2, 784, 256), DTYPE_FLOAT32);
     Tensor* layer1_bias = tensor_alloc(shapeN(1, 256), DTYPE_FLOAT32);
     Tensor* layer2_weight = tensor_alloc(shapeN(2, 256, 10), DTYPE_FLOAT32);
     Tensor* layer2_bias = tensor_alloc(shapeN(1, 10), DTYPE_FLOAT32);
 
-    free(layer1_weight->data);
-    free(layer1_bias->data);
-    free(layer2_weight->data);
-    free(layer2_bias->data);
-
-    layer1_weight->data = (void*)layer1_weight_data;
-    layer1_bias->data = (void*)layer1_bias_data;
-    layer2_weight->data = (void*)layer2_weight_data;
-    layer2_bias->data = (void*)layer2_bias_data;
-
     RETURN_IF_ERROR(reshape(layer1_weight, shapeN(3, 1, 784, 256)));
     RETURN_IF_ERROR(reshape(d.x, shapeN(3, 100, 1, 784)));
     RETURN_IF_ERROR(reshape(layer2_weight, shapeN(3, 1, 256, 10)));
+
+    RNG* r;
+    r->state = 67;
+
+    tensor_fill_uniform(layer1_weight, r);
+    tensor_fill_uniform(layer1_bias, r);
+    tensor_fill_uniform(layer2_weight, r);
+    tensor_fill_uniform(layer2_bias, r);
+
+    float k1 = 1 / 784;
+    float k2 = 1 / 256;
+
+    tensor_scale_and_add_const(layer1_weight, -2 * k1, -k1);
+    tensor_scale_and_add_const(layer1_bias, -2 * k1, -k1);
+
+    tensor_scale_and_add_const(layer2_weight, -2 * k2, -k2);
+    tensor_scale_and_add_const(layer2_bias, -2 * k2, -k2);
 
     // forward
 
@@ -106,6 +106,14 @@ int main(void) {
     Tensor* layer1_bias_grad = tensor_alloc(layer1_bias->shape, DTYPE_FLOAT32);
     Tensor* layer1_weight_grad =
         tensor_alloc(layer1_weight->shape, DTYPE_FLOAT32);
+    Tensor* layer1_weight_m = tensor_alloc(layer1_weight->shape, DTYPE_FLOAT32);
+    Tensor* layer1_weight_v = tensor_alloc(layer1_weight->shape, DTYPE_FLOAT32);
+    Tensor* layer1_bias_m = tensor_alloc(layer1_bias->shape, DTYPE_FLOAT32);
+    Tensor* layer1_bias_v = tensor_alloc(layer1_bias->shape, DTYPE_FLOAT32);
+    tensor_fill_float(layer1_weight_m, 0.0f);
+    tensor_fill_float(layer1_weight_v, 0.0f);
+    tensor_fill_float(layer1_bias_m, 0.0f);
+    tensor_fill_float(layer1_bias_v, 0.0f);
 
     Tensor* argmax_out = tensor_alloc(shapeN(2, 100, 1), DTYPE_UINT8);
 
@@ -115,8 +123,17 @@ int main(void) {
     Tensor* layer2_bias_grad = tensor_alloc(layer2_bias->shape, DTYPE_FLOAT32);
     Tensor* layer2_weight_grad =
         tensor_alloc(shapeN(3, 100, 256, 10), DTYPE_FLOAT32);
+    Tensor* layer2_weight_m = tensor_alloc(layer2_weight->shape, DTYPE_FLOAT32);
+    Tensor* layer2_weight_v = tensor_alloc(layer2_weight->shape, DTYPE_FLOAT32);
+    Tensor* layer2_bias_m = tensor_alloc(layer2_bias->shape, DTYPE_FLOAT32);
+    Tensor* layer2_bias_v = tensor_alloc(layer2_bias->shape, DTYPE_FLOAT32);
+    tensor_fill_float(layer2_weight_m, 0.0f);
+    tensor_fill_float(layer2_weight_v, 0.0f);
+    tensor_fill_float(layer2_bias_m, 0.0f);
+    tensor_fill_float(layer2_bias_v, 0.0f);
     float acc = 0.0;
     float loss = 0.0;
+    size_t t = 1;
 
     RETURN_IF_ERROR(bmm(hidden_1, d.x, layer1_weight, false, false));
     RETURN_IF_ERROR(tensor_add(hidden_1, layer1_bias));
@@ -150,11 +167,32 @@ int main(void) {
     RETURN_IF_ERROR(bmm_backward(d.x, layer1_weight, hidden_1_grad, NULL,
                                  layer1_weight_grad));
 
-    print_tensor(layer1_weight_grad);
-    print_tensor(layer1_bias_grad);
-    RETURN_IF_ERROR(tensor_scale_float(layer2_weight_grad, 10000.0f));
-    print_tensor(layer2_weight_grad);
-    print_tensor(layer2_bias_grad);
+    adam_step(/*lr = */ 0.1f, /*beta1 = */ 0.9f, /*beta2 = */ 0.999f,
+              /*eps = */ 1e-08, t, layer1_weight_grad, layer1_weight,
+              layer1_weight_m, layer1_weight_v);
+
+    adam_step(/*lr = */ 0.1f, /*beta1 = */ 0.9f, /*beta2 = */ 0.999f,
+              /*eps = */ 1e-08, t, layer1_bias_grad, layer1_bias, layer1_bias_m,
+              layer1_bias_v);
+
+    adam_step(/*lr = */ 0.1f, /*beta1 = */ 0.9f, /*beta2 = */ 0.999f,
+              /*eps = */ 1e-08, t, layer2_weight_grad, layer2_weight,
+              layer2_weight_m, layer2_weight_v);
+
+    adam_step(/*lr = */ 0.1f, /*beta1 = */ 0.9f, /*beta2 = */ 0.999f,
+              /*eps = */ 1e-08, t, layer2_bias_grad, layer2_bias, layer2_bias_m,
+              layer2_bias_v);
+
+    print_tensor(layer1_weight);
+    print_tensor(layer1_bias);
+    print_tensor(layer2_weight);
+    print_tensor(layer2_bias);
+
+    // print_tensor(layer1_weight_grad);
+    // print_tensor(layer1_bias_grad);
+    // RETURN_IF_ERROR(tensor_scale_float(layer2_weight_grad, 10000.0f));
+    // print_tensor(layer2_weight_grad);
+    // print_tensor(layer2_bias_grad);
 
     tensor_free(&t1);
     tensor_free(&t2);

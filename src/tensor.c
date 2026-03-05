@@ -507,3 +507,29 @@ int tensor_square_scale_and_add(Tensor* y, float a, const Tensor* x) {
         y_data[i] += a * (x_data[i] * x_data[i]);
     return 0;
 }
+
+int tensor_fill_uniform(Tensor* t, RNG* r) {
+    if (t == NULL) {
+        return 1;
+    }
+    if (r == NULL) {
+        return 2;
+    }
+    float* t_data = (float*)t->data;
+    for (size_t i = 0; i < t->size; ++i) {
+        t_data[i] = rng_uniform(r);
+    }
+    return 0;
+}
+
+int tensor_scale_and_add_const(Tensor* y, float a, float b) {
+    if (y == NULL) {
+        return 1;
+    }
+    float* y_data = (float*)y->data;
+    for (size_t i = 0; i < y->size; ++i) {
+        y_data[i] = y_data[i] * a + b;
+    }
+
+    return 0;
+}
