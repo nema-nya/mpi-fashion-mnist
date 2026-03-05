@@ -28,6 +28,207 @@ void test_bcast() {
     assert(fabs(x_data[1] - 20.0) < 1e-5);
 }
 
+void test_bmm() {
+    Tensor* x = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    Tensor* y = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    Tensor* z = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    float y_values[] = {1, 2, 3, 4};
+    float x_values[] = {1, 2, 3, 4};
+    float z_values[] = {0, 0, 0, 0};
+    memcpy(x->data, x_values, tensor_byte_count(x));
+    memcpy(y->data, y_values, tensor_byte_count(y));
+    memcpy(z->data, z_values, tensor_byte_count(z));
+
+    int ret = bmm(z, x, y, /*transpose_A=*/false, /*transpose_B=*/false);
+
+    assert(ret == 0);
+    float* z_data = (float*)z->data;
+    // float z_targets[] = {5, 11, 11, 25}; // B.T
+    // float z_targets[] = {10, 14, 14, 20}; // A.T
+    // float z_targets[] = {7, 15, 10, 22}; // A.T B.T
+    float z_targets[] = {7, 10, 15, 22};
+    bool passing = true;
+    for (size_t i = 0; i < z->size; ++i) {
+        if (fabs(z_data[i] - z_targets[i]) > 1e-5) {
+            passing = false;
+        }
+    }
+    if (!passing) {
+        printf("Got: ");
+        for (size_t i = 0; i < z->size; ++i) {
+            printf("%f ", z_data[i]);
+        }
+        printf("\r\nExpected: ");
+        for (size_t i = 0; i < z->size; ++i) {
+            printf("%f ", z_targets[i]);
+        }
+        printf("\r\n");
+    }
+    assert(passing);
+}
+
+void test_bmm_transpose_A() {
+    Tensor* x = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    Tensor* y = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    Tensor* z = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    float y_values[] = {1, 2, 3, 4};
+    float x_values[] = {1, 2, 3, 4};
+    float z_values[] = {0, 0, 0, 0};
+    memcpy(x->data, x_values, tensor_byte_count(x));
+    memcpy(y->data, y_values, tensor_byte_count(y));
+    memcpy(z->data, z_values, tensor_byte_count(z));
+
+    int ret = bmm(z, x, y, /*transpose_A=*/true, /*transpose_B=*/false);
+
+    assert(ret == 0);
+    float* z_data = (float*)z->data;
+    float z_targets[] = {10, 14, 14, 20};
+    bool passing = true;
+    for (size_t i = 0; i < z->size; ++i) {
+        if (fabs(z_data[i] - z_targets[i]) > 1e-5) {
+            passing = false;
+        }
+    }
+    if (!passing) {
+        printf("Got: ");
+        for (size_t i = 0; i < z->size; ++i) {
+            printf("%f ", z_data[i]);
+        }
+        printf("\r\nExpected: ");
+        for (size_t i = 0; i < z->size; ++i) {
+            printf("%f ", z_targets[i]);
+        }
+        printf("\r\n");
+    }
+    assert(passing);
+}
+
+void test_bmm_transpose_B() {
+    Tensor* x = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    Tensor* y = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    Tensor* z = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    float y_values[] = {1, 2, 3, 4};
+    float x_values[] = {1, 2, 3, 4};
+    float z_values[] = {0, 0, 0, 0};
+    memcpy(x->data, x_values, tensor_byte_count(x));
+    memcpy(y->data, y_values, tensor_byte_count(y));
+    memcpy(z->data, z_values, tensor_byte_count(z));
+
+    int ret = bmm(z, x, y, /*transpose_A=*/false, /*transpose_B=*/true);
+
+    assert(ret == 0);
+    float* z_data = (float*)z->data;
+    float z_targets[] = {5, 11, 11, 25};
+    bool passing = true;
+    for (size_t i = 0; i < z->size; ++i) {
+        if (fabs(z_data[i] - z_targets[i]) > 1e-5) {
+            passing = false;
+        }
+    }
+    if (!passing) {
+        printf("Got: ");
+        for (size_t i = 0; i < z->size; ++i) {
+            printf("%f ", z_data[i]);
+        }
+        printf("\r\nExpected: ");
+        for (size_t i = 0; i < z->size; ++i) {
+            printf("%f ", z_targets[i]);
+        }
+        printf("\r\n");
+    }
+    assert(passing);
+}
+
+void test_bmm_transpose_AB() {
+    Tensor* x = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    Tensor* y = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    Tensor* z = tensor_alloc(shapeN(3, 1, 2, 2), DTYPE_FLOAT32);
+    float y_values[] = {1, 2, 3, 4};
+    float x_values[] = {1, 2, 3, 4};
+    float z_values[] = {0, 0, 0, 0};
+    memcpy(x->data, x_values, tensor_byte_count(x));
+    memcpy(y->data, y_values, tensor_byte_count(y));
+    memcpy(z->data, z_values, tensor_byte_count(z));
+
+    int ret = bmm(z, x, y, /*transpose_A=*/true, /*transpose_B=*/true);
+
+    assert(ret == 0);
+    float* z_data = (float*)z->data;
+    float z_targets[] = {7, 15, 10, 22};
+    bool passing = true;
+    for (size_t i = 0; i < z->size; ++i) {
+        if (fabs(z_data[i] - z_targets[i]) > 1e-5) {
+            passing = false;
+        }
+    }
+    if (!passing) {
+        printf("Got: ");
+        for (size_t i = 0; i < z->size; ++i) {
+            printf("%f ", z_data[i]);
+        }
+        printf("\r\nExpected: ");
+        for (size_t i = 0; i < z->size; ++i) {
+            printf("%f ", z_targets[i]);
+        }
+        printf("\r\n");
+    }
+    assert(passing);
+}
+
+void test_bmm_transpose_A_fuzz() {
+    Tensor* x = tensor_alloc(shapeN(3, 1, 64, 64), DTYPE_FLOAT32);
+    Tensor* x_perm = tensor_alloc(shapeN(3, 1, 64, 64), DTYPE_FLOAT32);
+    Tensor* y = tensor_alloc(shapeN(3, 1, 64, 64), DTYPE_FLOAT32);
+    Tensor* z1 = tensor_alloc(shapeN(3, 1, 64, 64), DTYPE_FLOAT32);
+    Tensor* z2 = tensor_alloc(shapeN(3, 1, 64, 64), DTYPE_FLOAT32);
+    RNG rng;
+    rng.state = 42;
+    tensor_fill_rand_normal(x, &rng);
+    tensor_fill_rand_normal(y, &rng);
+
+    int ret = 0;
+    ret = bmm(z1, x, y, /*transpose_A=*/true, /*transpose_B=*/false);
+    assert(ret == 0);
+
+    tensor_copy(x_perm, x);
+    permute(x_perm, 0, 2, 1);
+    ret = bmm(z2, x_perm, y, /*transpose_A=*/false, /*transpose_B=*/false);
+    assert(ret == 0);
+
+    float* z1_data = (float*)z1->data;
+    float* z2_data = (float*)z2->data;
+    for (size_t i = 0; i < z1->size; ++i) {
+        assert(fabs(z1_data[i] - z2_data[i]) < 1e-5);
+    }
+}
+
+void test_bmm_transpose_B_fuzz() {
+    Tensor* x = tensor_alloc(shapeN(3, 1, 64, 64), DTYPE_FLOAT32);
+    Tensor* y = tensor_alloc(shapeN(3, 1, 64, 64), DTYPE_FLOAT32);
+    Tensor* y_perm = tensor_alloc(shapeN(3, 1, 64, 64), DTYPE_FLOAT32);
+    Tensor* z1 = tensor_alloc(shapeN(3, 1, 64, 64), DTYPE_FLOAT32);
+    Tensor* z2 = tensor_alloc(shapeN(3, 1, 64, 64), DTYPE_FLOAT32);
+    RNG rng;
+    rng.state = 42;
+    tensor_fill_rand_normal(x, &rng);
+    tensor_fill_rand_normal(y, &rng);
+
+    int ret = 0;
+    ret = bmm(z1, x, y, /*transpose_A=*/false, /*transpose_B=*/true);
+    assert(ret == 0);
+
+    tensor_copy(y_perm, y);
+    permute(y_perm, 0, 2, 1);
+    ret = bmm(z2, x, y_perm, /*transpose_A=*/false, /*transpose_B=*/false);
+    assert(ret == 0);
+
+    float* z1_data = (float*)z1->data;
+    float* z2_data = (float*)z2->data;
+    for (size_t i = 0; i < z1->size; ++i) {
+        assert(fabs(z1_data[i] - z2_data[i]) < 1e-5);
+    }
+}
+
 bool verify_endianness() {
     uint16_t dummy = 0x0100;
     uint8_t* dummy_ptr = (uint8_t*)(&dummy);
@@ -36,6 +237,12 @@ bool verify_endianness() {
 
 int main(void) {
     test_bcast();
+    test_bmm();
+    test_bmm_transpose_A();
+    test_bmm_transpose_B();
+    test_bmm_transpose_AB();
+    test_bmm_transpose_A_fuzz();
+    test_bmm_transpose_B_fuzz();
     assert(("Your system is big-endian", verify_endianness()));
     Dataset d;
     if (dataset_load_bin("data/train-labels.bin", "data/train-data.bin", &d)) {
@@ -46,8 +253,8 @@ int main(void) {
     Tensor* new_y = tensor_alloc(shapeN(1, 100), DTYPE_UINT8);
 
     reshape(d.x, shapeN(3, 60000, 1, 784));
-    int ts_ret1 = tensor_slice(d.x, new_x, 0, 0, 100);
-    int ts_ret2 = tensor_slice(d.y, new_y, 0, 0, 100);
+    RETURN_IF_ERROR(tensor_slice(d.x, new_x, 0, 0, 100));
+    RETURN_IF_ERROR(tensor_slice(d.y, new_y, 0, 0, 100));
     free(d.x);
     free(d.y);
     d.x = new_x;
@@ -81,16 +288,16 @@ int main(void) {
     RETURN_IF_ERROR(reshape(d.x, shapeN(3, 100, 1, 784)));
     RETURN_IF_ERROR(reshape(layer2_weight, shapeN(3, 1, 256, 10)));
 
-    RNG* r;
-    r->state = 67;
+    RNG r;
+    r.state = 67;
 
-    tensor_fill_uniform(layer1_weight, r);
-    tensor_fill_uniform(layer1_bias, r);
-    tensor_fill_uniform(layer2_weight, r);
-    tensor_fill_uniform(layer2_bias, r);
+    tensor_fill_uniform(layer1_weight, &r);
+    tensor_fill_uniform(layer1_bias, &r);
+    tensor_fill_uniform(layer2_weight, &r);
+    tensor_fill_uniform(layer2_bias, &r);
 
-    float k1 = 1 / 784;
-    float k2 = 1 / 256;
+    float k1 = 1.0 / 784.0;
+    float k2 = 1.0 / 256.0;
 
     tensor_scale_and_add_const(layer1_weight, -2 * k1, -k1);
     tensor_scale_and_add_const(layer1_bias, -2 * k1, -k1);
@@ -99,7 +306,6 @@ int main(void) {
     tensor_scale_and_add_const(layer2_bias, -2 * k2, -k2);
 
     // forward
-
     Tensor* hidden_1 = tensor_alloc(shapeN(3, 100, 1, 256), DTYPE_FLOAT32);
     Tensor* hidden_1_grad = tensor_alloc(shapeN(3, 100, 1, 256), DTYPE_FLOAT32);
     Tensor* hidden_1_pre_tanh = tensor_alloc(hidden_1->shape, DTYPE_FLOAT32);
@@ -122,7 +328,7 @@ int main(void) {
 
     Tensor* layer2_bias_grad = tensor_alloc(layer2_bias->shape, DTYPE_FLOAT32);
     Tensor* layer2_weight_grad =
-        tensor_alloc(shapeN(3, 100, 256, 10), DTYPE_FLOAT32);
+        tensor_alloc(layer2_weight->shape, DTYPE_FLOAT32);
     Tensor* layer2_weight_m = tensor_alloc(layer2_weight->shape, DTYPE_FLOAT32);
     Tensor* layer2_weight_v = tensor_alloc(layer2_weight->shape, DTYPE_FLOAT32);
     Tensor* layer2_bias_m = tensor_alloc(layer2_bias->shape, DTYPE_FLOAT32);
@@ -133,66 +339,86 @@ int main(void) {
     tensor_fill_float(layer2_bias_v, 0.0f);
     float acc = 0.0;
     float loss = 0.0;
-    size_t t = 1;
+    size_t t = 0;
+    size_t epochs = 1000;
+    float lr = 0.001;
+    for (size_t ep = 0; ep < epochs; ++ep) {
+        t++;
+        RETURN_IF_ERROR(bmm(hidden_1, d.x, layer1_weight, false, false));
+        RETURN_IF_ERROR(tensor_add(hidden_1, layer1_bias));
 
-    RETURN_IF_ERROR(bmm(hidden_1, d.x, layer1_weight, false, false));
-    RETURN_IF_ERROR(tensor_add(hidden_1, layer1_bias));
+        RETURN_IF_ERROR(tensor_copy(hidden_1_pre_tanh, hidden_1));
 
-    RETURN_IF_ERROR(tensor_copy(hidden_1_pre_tanh, hidden_1));
+        RETURN_IF_ERROR(tensor_tanh(hidden_1));
 
-    RETURN_IF_ERROR(tensor_tanh(hidden_1));
+        RETURN_IF_ERROR(bmm(hidden_2, hidden_1, layer2_weight, false, false));
+        RETURN_IF_ERROR(tensor_add(hidden_2, layer2_bias));
 
-    RETURN_IF_ERROR(bmm(hidden_2, hidden_1, layer2_weight, false, false));
-    RETURN_IF_ERROR(tensor_add(hidden_2, layer2_bias));
+        // Tensor* src = hidden_2;
+        // float* buf = (float*)src->data;
+        // for (size_t i = 0; i < (src->size > 100 ? 100 : src->size); ++i) {
+        //     printf("%f ", buf[i]);
+        // }
+        // printf("\r\n");
 
-    RETURN_IF_ERROR(tensor_argmax(hidden_2, argmax_out));
-    RETURN_IF_ERROR(reshape(argmax_out, shapeN(1, 100)));
-    RETURN_IF_ERROR(accuracy(argmax_out, d.y, &acc));
+        RETURN_IF_ERROR(tensor_argmax(hidden_2, argmax_out));
+        RETURN_IF_ERROR(reshape(argmax_out, shapeN(1, 100)));
+        print_tensor(argmax_out);
+        RETURN_IF_ERROR(accuracy(argmax_out, d.y, &acc));
+        RETURN_IF_ERROR(reshape(argmax_out, shapeN(2, 100, 1)));
 
-    RETURN_IF_ERROR(reshape(hidden_2, shapeN(2, 100, 10)));
-    RETURN_IF_ERROR(cross_entropy(hidden_2, d.y, &loss));
-    printf("%.5f\n", loss);
-    ////////////////////////////////////////////////////////////////////////////////////////////
-    RETURN_IF_ERROR(cross_entropy_backward(hidden_2, d.y, hidden_2_grad));
-    RETURN_IF_ERROR(reshape(hidden_2, shapeN(3, 100, 1, 10)));
-    RETURN_IF_ERROR(reshape(hidden_2_grad, shapeN(3, 100, 1, 10)));
+        RETURN_IF_ERROR(reshape(hidden_2, shapeN(2, 100, 10)));
+        RETURN_IF_ERROR(cross_entropy(hidden_2, d.y, &loss));
+        printf("epoch %zu loss = %.5f acc = %.5f\n", ep, loss, acc);
+        ////////////////////////////////////////////////////////////////////////////////////////////
+        RETURN_IF_ERROR(cross_entropy_backward(hidden_2, d.y, hidden_2_grad));
+        RETURN_IF_ERROR(reshape(hidden_2, shapeN(3, 100, 1, 10)));
+        RETURN_IF_ERROR(reshape(hidden_2_grad, shapeN(3, 100, 1, 10)));
 
-    RETURN_IF_ERROR(tensor_add_backward(hidden_2_grad, NULL, layer2_bias_grad));
-    RETURN_IF_ERROR(bmm_backward(hidden_1, layer2_weight, hidden_2_grad,
-                                 hidden_1_grad, layer2_weight_grad));
+        RETURN_IF_ERROR(
+            tensor_add_backward(hidden_2_grad, NULL, layer2_bias_grad));
+        RETURN_IF_ERROR(bmm_backward(hidden_1, layer2_weight, hidden_2_grad,
+                                     hidden_1_grad, layer2_weight_grad));
+        RETURN_IF_ERROR(reshape(hidden_2_grad, shapeN(2, 100, 10)));
 
-    RETURN_IF_ERROR(tensor_tanh_backward(hidden_1_pre_tanh, hidden_1_grad));
+        RETURN_IF_ERROR(tensor_tanh_backward(hidden_1_pre_tanh, hidden_1_grad));
 
-    RETURN_IF_ERROR(tensor_add_backward(hidden_1_grad, NULL, layer1_bias_grad));
-    RETURN_IF_ERROR(bmm_backward(d.x, layer1_weight, hidden_1_grad, NULL,
-                                 layer1_weight_grad));
+        RETURN_IF_ERROR(
+            tensor_add_backward(hidden_1_grad, NULL, layer1_bias_grad));
+        RETURN_IF_ERROR(bmm_backward(d.x, layer1_weight, hidden_1_grad, NULL,
+                                     layer1_weight_grad));
 
-    adam_step(/*lr = */ 0.1f, /*beta1 = */ 0.9f, /*beta2 = */ 0.999f,
-              /*eps = */ 1e-08, t, layer1_weight_grad, layer1_weight,
-              layer1_weight_m, layer1_weight_v);
+        RETURN_IF_ERROR(adam_step(lr, /*beta1 = */ 0.9f, /*beta2 = */ 0.999f,
+                                  /*eps = */ 1e-08, t, layer1_weight_grad,
+                                  layer1_weight, layer1_weight_m,
+                                  layer1_weight_v));
 
-    adam_step(/*lr = */ 0.1f, /*beta1 = */ 0.9f, /*beta2 = */ 0.999f,
-              /*eps = */ 1e-08, t, layer1_bias_grad, layer1_bias, layer1_bias_m,
-              layer1_bias_v);
+        RETURN_IF_ERROR(adam_step(lr, /*beta1 = */ 0.9f,
+                                  /*beta2 = */ 0.999f,
+                                  /*eps = */ 1e-08, t, layer1_bias_grad,
+                                  layer1_bias, layer1_bias_m, layer1_bias_v));
 
-    adam_step(/*lr = */ 0.1f, /*beta1 = */ 0.9f, /*beta2 = */ 0.999f,
-              /*eps = */ 1e-08, t, layer2_weight_grad, layer2_weight,
-              layer2_weight_m, layer2_weight_v);
+        RETURN_IF_ERROR(adam_step(lr, /*beta1 = */ 0.9f, /*beta2 = */ 0.999f,
+                                  /*eps = */ 1e-08, t, layer2_weight_grad,
+                                  layer2_weight, layer2_weight_m,
+                                  layer2_weight_v));
 
-    adam_step(/*lr = */ 0.1f, /*beta1 = */ 0.9f, /*beta2 = */ 0.999f,
-              /*eps = */ 1e-08, t, layer2_bias_grad, layer2_bias, layer2_bias_m,
-              layer2_bias_v);
+        RETURN_IF_ERROR(adam_step(lr, /*beta1 = */ 0.9f,
+                                  /*beta2 = */ 0.999f,
+                                  /*eps = */ 1e-08, t, layer2_bias_grad,
+                                  layer2_bias, layer2_bias_m, layer2_bias_v));
 
-    print_tensor(layer1_weight);
-    print_tensor(layer1_bias);
-    print_tensor(layer2_weight);
-    print_tensor(layer2_bias);
+        // print_tensor(layer1_weight);
+        // print_tensor(layer1_bias);
+        // print_tensor(layer2_weight);
+        // print_tensor(layer2_bias);
 
-    // print_tensor(layer1_weight_grad);
-    // print_tensor(layer1_bias_grad);
-    // RETURN_IF_ERROR(tensor_scale_float(layer2_weight_grad, 10000.0f));
-    // print_tensor(layer2_weight_grad);
-    // print_tensor(layer2_bias_grad);
+        // print_tensor(layer1_weight_grad);
+        // print_tensor(layer1_bias_grad);
+        // RETURN_IF_ERROR(tensor_scale_float(layer2_weight_grad, 10000.0f));
+        // print_tensor(layer2_weight_grad);
+        // print_tensor(layer2_bias_grad);
+    }
 
     tensor_free(&t1);
     tensor_free(&t2);

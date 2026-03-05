@@ -92,7 +92,7 @@ Shape shape3(size_t d0, size_t d1, size_t d2);
 
 Shape shapeN(size_t rank, ...);
 
-void print_shape(const Tensor* t);
+void print_shape(const Shape s);
 
 void print_tensor(const Tensor* t);
 

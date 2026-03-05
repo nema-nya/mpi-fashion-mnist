@@ -40,8 +40,8 @@ int bmm(Tensor* C, const Tensor* A, const Tensor* B, bool transpose_A,
 
                     if (transpose_A) {
                         a_index = tensor_index(A->shape, i % A->shape.dims[0],
-                                               l % A->shape.dims[2],
-                                               j % A->shape.dims[1]);
+                                               l % A->shape.dims[1],
+                                               j % A->shape.dims[2]);
                     } else {
                         a_index = tensor_index(A->shape, i % A->shape.dims[0],
                                                j % A->shape.dims[1],
@@ -50,8 +50,8 @@ int bmm(Tensor* C, const Tensor* A, const Tensor* B, bool transpose_A,
 
                     if (transpose_B) {
                         b_index = tensor_index(B->shape, i % B->shape.dims[0],
-                                               k % B->shape.dims[2],
-                                               l % B->shape.dims[1]);
+                                               k % B->shape.dims[1],
+                                               l % B->shape.dims[2]);
                     } else {
                         b_index = tensor_index(B->shape, i % B->shape.dims[0],
                                                l % B->shape.dims[1],
@@ -147,7 +147,9 @@ int tensor_argmax(const Tensor* a, Tensor* out) {
     }
 
     if (!shape_is_equal(s, out->shape)) {
-        return 3;
+        print_shape(s);
+        print_shape(out->shape);
+        return 4;
     }
 
     size_t indicies[MAX_RANK];
@@ -159,8 +161,7 @@ int tensor_argmax(const Tensor* a, Tensor* out) {
         size_t new_i = tensor_index_array(a->shape, indicies);
         size_t argmax = 0;
         for (size_t j = 1; j < a->shape.dims[s.rank]; ++j) {
-            size_t a_i = new_i + j;
-            if (a_data[a_i] > a_data[new_i + argmax]) {
+            if (a_data[new_i + j] > a_data[new_i + argmax]) {
                 argmax = j;
             }
         }
@@ -366,6 +367,9 @@ int tensor_add_backward(const Tensor* ab_grad, Tensor* a_grad, Tensor* b_grad) {
 int bmm_backward(const Tensor* A, const Tensor* B, const Tensor* C_grad,
                  Tensor* A_grad, Tensor* B_grad) {
     if (A_grad != NULL) {
+        // print_shape(A_grad->shape);
+        // print_shape(C_grad->shape);
+        // print_shape(B->shape);
         RETURN_IF_ERROR(bmm(A_grad, C_grad, B, false, true));
     }
 

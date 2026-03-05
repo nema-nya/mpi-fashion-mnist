@@ -450,9 +450,9 @@ Shape shapeN(size_t rank, ...) {
     return n;
 }
 
-void print_shape(const Tensor* t) {
-    for (size_t i = 0; i < t->shape.rank; ++i) {
-        printf("%zu ", t->shape.dims[i]);
+void print_shape(const Shape s) {
+    for (size_t i = 0; i < s.rank; ++i) {
+        printf("%zu ", s.dims[i]);
     }
     printf("\n\r");
 }
@@ -485,7 +485,7 @@ int shape_is_compatible(const Shape from, const Shape to) {
 }
 
 int tensor_scale_and_add(Tensor* y, float a, const Tensor* x) {
-    if (!assert_tensors(y, x)) return 1;
+    RETURN_IF_ERROR(assert_tensors(y, x))
 
     if (y->dtype != DTYPE_FLOAT32 || x->dtype != DTYPE_FLOAT32) {
         return 2;
@@ -496,7 +496,7 @@ int tensor_scale_and_add(Tensor* y, float a, const Tensor* x) {
     return 0;
 }
 int tensor_square_scale_and_add(Tensor* y, float a, const Tensor* x) {
-    if (!assert_tensors(y, x)) return 1;
+    RETURN_IF_ERROR(assert_tensors(y, x));
 
     if (y->dtype != DTYPE_FLOAT32 || x->dtype != DTYPE_FLOAT32) {
         return 2;
