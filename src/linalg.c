@@ -9,6 +9,14 @@
 #include "tensor.h"
 #include "utils.h"
 
+int max(size_t a, size_t b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
 int bmm(Tensor* C, const Tensor* A, const Tensor* B, bool transpose_A,
         bool transpose_B) {
     if (C == NULL || A == NULL || B == NULL) return 1;
@@ -26,12 +34,17 @@ int bmm(Tensor* C, const Tensor* A, const Tensor* B, bool transpose_A,
     if (A->dtype != DTYPE_FLOAT32 || B->dtype != DTYPE_FLOAT32 ||
         C->dtype != DTYPE_FLOAT32)
         return 4;
+
     float* a_data = (float*)A->data;
     float* b_data = (float*)B->data;
     float* c_data = (float*)C->data;
-    for (size_t i = 0; i < C->shape.dims[0]; ++i) {
-        for (size_t j = 0; j < C->shape.dims[1]; ++j) {
-            for (size_t k = 0; k < C->shape.dims[2]; ++k) {
+    size_t true_C0 =
+        max(A->shape.dims[0], max(C->shape.dims[0], B->shape.dims[0]));
+    size_t true_C1 = max(A->shape.dims[1], C->shape.dims[1]);
+    size_t true_C2 = max(B->shape.dims[2], C->shape.dims[2]);
+    for (size_t i = 0; i < true_C0; ++i) {
+        for (size_t j = 0; j < true_C1; ++j) {
+            for (size_t k = 0; k < true_C2; ++k) {
                 size_t c_index = tensor_index(C->shape, i, j, k);
                 float sum = 0.0f;
                 for (size_t l = 0; l < A->shape.dims[a_axis]; ++l) {
@@ -59,7 +72,7 @@ int bmm(Tensor* C, const Tensor* A, const Tensor* B, bool transpose_A,
                     }
                     sum += a_data[a_index] * b_data[b_index];
                 }
-                c_data[c_index] = sum;
+                c_data[c_index] += sum;
             }
         }
     }
@@ -367,9 +380,6 @@ int tensor_add_backward(const Tensor* ab_grad, Tensor* a_grad, Tensor* b_grad) {
 int bmm_backward(const Tensor* A, const Tensor* B, const Tensor* C_grad,
                  Tensor* A_grad, Tensor* B_grad) {
     if (A_grad != NULL) {
-        // print_shape(A_grad->shape);
-        // print_shape(C_grad->shape);
-        // print_shape(B->shape);
         RETURN_IF_ERROR(bmm(A_grad, C_grad, B, false, true));
     }
 

@@ -189,7 +189,7 @@ size_t tensor_index(const Shape shape, ...) {
     for (size_t i = 0; i < shape.rank; ++i) {
         size_t ix = va_arg(args, int);
         out *= shape.dims[i];
-        out += ix;
+        out += ix % shape.dims[i];
     }
     va_end(args);
     return out;
