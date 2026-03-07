@@ -106,4 +106,6 @@ int tensor_fill_uniform(Tensor* t, RNG* r);
 
 int tensor_scale_and_add_const(Tensor* y, float a, float b);
 
+int dataset_rand_perm(Tensor* x, Tensor* y, RNG* r);
+
 #endif

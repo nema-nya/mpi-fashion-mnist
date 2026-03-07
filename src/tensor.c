@@ -533,3 +533,59 @@ int tensor_scale_and_add_const(Tensor* y, float a, float b) {
 
     return 0;
 }
+
+int dataset_rand_perm(Tensor* x, Tensor* y, RNG* r) {
+    CHECK(x != NULL);
+    CHECK(y != NULL);
+    CHECK(x->shape.dims[0] == y->shape.dims[0]);
+    CHECK(x->dtype == DTYPE_FLOAT32);
+    CHECK(y->dtype == DTYPE_UINT8);
+
+    size_t n = x->shape.dims[0];
+
+    int* perm = (int*)malloc(sizeof(int) * n);
+    for (size_t i = 0; i < n; ++i) {
+        perm[i] = i;
+        size_t target_pos = (size_t)rng_rand(r) % (i + 1);
+
+        int tmp = perm[i];
+        perm[i] = perm[target_pos];
+        perm[target_pos] = tmp;
+    }
+
+    float* x_data = (float*)x->data;
+    uint8_t* y_data = (uint8_t*)y->data;
+    size_t x_block_size = x->size / n;
+    size_t y_block_size = y->size / n;
+    float* x_buffer = (float*)malloc(x_block_size * sizeof(float));
+    uint8_t* y_buffer = (uint8_t*)malloc(y_block_size * sizeof(uint8_t));
+    for (size_t i = 0; i < n; ++i) {
+        if (perm[i] == -1) {
+            continue;
+        }
+        size_t j = i;
+        while (true) {
+            size_t k = perm[j];
+            memcpy(x_buffer, x_data + x_block_size * k,
+                   x_block_size * sizeof(float));
+            memcpy(x_data + x_block_size * k, x_data + x_block_size * j,
+                   x_block_size * sizeof(float));
+            memcpy(x_data + x_block_size * j, x_buffer,
+                   x_block_size * sizeof(float));
+
+            memcpy(y_buffer, y_data + y_block_size * k,
+                   y_block_size * sizeof(uint8_t));
+            memcpy(y_data + y_block_size * k, y_data + y_block_size * j,
+                   y_block_size * sizeof(uint8_t));
+            memcpy(y_data + y_block_size * j, y_buffer,
+                   y_block_size * sizeof(uint8_t));
+            perm[j] = -1;
+            j = k;
+            if (j == i) {
+                break;
+            }
+        }
+    }
+
+    return 0;
+}
