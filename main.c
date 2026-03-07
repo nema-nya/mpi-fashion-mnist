@@ -246,7 +246,7 @@ int main(void) {
     assert(("Your system is big-endian", verify_endianness()));
     Dataset d;
     RETURN_IF_ERROR(
-        dataset_load_bin("data/train-labels.bin", "data/train-data.bin", &d))
+        dataset_load_bin("data/train-labels.bin", "data/train-data.bin", &d));
     float frac_to_take = 0.01;
     int n_of_data_to_take = 60000 * frac_to_take;
 
@@ -284,7 +284,7 @@ int main(void) {
     float acc = 0.0f;
     float loss = 0.0f;
     size_t t = 0;
-    size_t epochs = 20;
+    size_t epochs = 5;
     float lr = 0.001f;
     float beta1 = 0.9f;
     float beta2 = 0.999f;
